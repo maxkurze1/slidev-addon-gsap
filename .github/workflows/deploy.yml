@@ -1,0 +1,75 @@
+# GitHub Pages deployment.
+#
+# Publishes two static sites and a root redirect to GitHub Pages:
+#   • the VitePress docs  → <pages-url>/docs
+#   • the Slidev showcase → <pages-url>/demo
+# For a project page the site is served under /<repo>, so every base is
+# derived from BASE = "/slidev-addon-gsap".
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permissions required by the Pages deployment.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deploy; don't cancel an in-progress run.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Path component of the Pages URL for this project page.
+      BASE: /slidev-addon-gsap
+      # Absolute URL of the deck. config.ts passes this through as an external
+      # link, so VitePress does NOT prefix it with the docs `base`.
+      DEMO_URL: https://maxkurze1.github.io/slidev-addon-gsap/demo/
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/configure-pages@v5
+
+      - name: Build docs and demo
+        run: |
+          rm -rf public && mkdir -p public
+
+          # Docs → /docs
+          DOCS_BASE="${BASE}/docs/" pnpm exec vitepress build docs
+          cp -r docs/.vitepress/dist public/docs
+
+          # Slidev deck → /demo
+          pnpm exec slidev build example.mdc --base "${BASE}/demo/" --out "$PWD/public/demo"
+
+          # Pages root → docs
+          printf '<!doctype html><meta http-equiv="refresh" content="0; url=./docs/">\n' > public/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

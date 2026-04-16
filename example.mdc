@@ -1,0 +1,711 @@
+---
+title: "GSAP × Two.js for Slidev"
+author: "Max Kurze"
+comark: true
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { useTl } from "slidev-addon-gsap"
+
+const tl = useTl()
+
+onMounted(() => {
+  tl.step()
+    .from(".feature", { opacity: 0, x: -20, stagger: 0.12, duration: 0.4 })
+    .step()
+})
+</script>
+
+<div class="h-full flex flex-col items-center justify-center gap-5">
+  <div class="text-5xl font-bold">GSAP <span class="text-emerald-500">×</span> Two.js</div>
+  <div class="text-xl opacity-70">A reactive animation toolkit for Slidev</div>
+  <div class="grid grid-cols-2 gap-x-10 gap-y-2 mt-6 text-lg">
+    <div class="feature">⏱️ <code>useTl</code> — click-driven timelines</div>
+    <div class="feature">📐 <code>usePos</code> — reactive element anchors</div>
+    <div class="feature">🎨 <code>useTwo</code> — arrows, paths, circles</div>
+    <div class="feature">🧩 <code>useSlide</code> — the slide root element</div>
+  </div>
+</div>
+
+<div class="absolute w-full flex justify-center left-0 bottom-10">
+  <div class="text-sm opacity-40 mt-6">press <kbd>→</kbd> to reveal — every animation here is click-driven</div>
+</div>
+
+
+---
+layout: two-cols
+layoutClass: gap-8
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { useTl } from "slidev-addon-gsap"
+
+const tl = useTl()
+
+onMounted(() => {
+  tl.from(".box", { opacity: 0, scale: 0.8, duration: 1 })
+    .step()
+    .from(".card-1", { opacity: 0, scale: 0.8, duration: 0.3 })
+    .step()
+    .from(".card-2", { opacity: 0, scale: 0.8, duration: 0.3 })
+    .step()
+    .from(".card-3", { opacity: 0, scale: 0.8, duration: 0.3 })
+    .step()
+})
+</script>
+
+# `useTl` — steps & clicks
+
+Build a paused GSAP timeline and split it into **steps**. Each click on the
+slide plays from one `step()` to the next.
+
+The slide's click count is **inferred from the number of `step()` calls** — no
+`clicks:` in the frontmatter needed.
+
+```ts
+const tl = useTl()
+
+tl.from(".box",    { opacity: 0, scale: 0.8 })
+  .step() // ← step 0 (initial)
+  .from(".card-1", { opacity: 0, scale: 0.8 })
+  .step() // ← click 1
+  .from(".card-2", { opacity: 0, scale: 0.8 })
+  .step() // ← click 2
+  .from(".card-3", { opacity: 0, scale: 0.8 })
+  .step() // ← click 3
+```
+
+::right::
+
+<div class="h-full flex items-center justify-center">
+  <div class="flex flex-col items-center justify-center gap-4 border-2 border-gray-400 box p-5 rounded-lg">
+    <div class="card-1 w-56 px-4 py-3 rounded-lg border-2 border-rose-400 bg-rose-400/10 text-center">First reveal</div>
+    <div class="card-2 w-56 px-4 py-3 rounded-lg border-2 border-sky-400 bg-sky-400/10 text-center">Second reveal</div>
+    <div class="card-3 w-56 px-4 py-3 rounded-lg border-2 border-emerald-400 bg-emerald-400/10 text-center">Third reveal</div>
+  </div>
+</div>
+
+---
+layout: two-cols
+layoutClass: gap-8
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { useTl } from "slidev-addon-gsap"
+
+const tl = useTl()
+
+onMounted(() => {
+  tl.step()
+    .from(".f-box", { opacity: 0, y: 24, duration: 0.4 })
+    .step()
+    .to(".f-box", { x: 150, rotate: 12, duration: 0.6, ease: "power2.out" })
+    .to(".f-box",
+      { borderColor: "#34d399", duration: 0.5 })
+    .step()
+})
+</script>
+
+# `useTl` — from / to / fromTo
+
+All of GSAP's tweens are available, and **CSS selectors are scoped to the
+current slide automatically** — `".box"` only matches inside this slide.
+
+```ts
+tl.step() // animate IN
+  .from(".box", { opacity: 0, y: 24 })
+  .step() // animate TO
+  .to(".box", { x: 150, rotate: 12 })
+  .fromTo(".box", // explicit start → end
+    { borderColor: "#666666" },
+    { borderColor: "#34d399" })
+  .step()
+```
+
+Stagger, easing, labels, relative time (`"-=0.3"`) — it's just GSAP.
+
+::right::
+
+<div class="h-full flex items-center justify-start pl-4">
+  <div class="f-box w-28 h-28 rounded-xl border-2 border-gray-300 dark:border-gray-700 bg-white/10 flex items-center justify-center font-semibold">.box</div>
+</div>
+
+---
+layout: two-cols
+layoutClass: gap-8
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { useTl } from "slidev-addon-gsap"
+
+const tl = useTl()
+
+onMounted(() => {
+  tl.step()
+    .popIn(".e-pop")
+    .step()
+    .slideIn(".e-slide", { from: "left" })
+    .step()
+    .dropIn(".e-drop")
+    .step()
+    .pulse(".e-pulse")
+    .step()
+})
+</script>
+
+# `useTl` — preset effects
+
+Common entrances, exits and emphasis with good defaults — chain them like any
+other step, override any GSAP var inline.
+
+```ts
+tl.step().popIn(".a")
+  .step().slideIn(".b", { from: "left" })
+  .step().dropIn(".c")
+  .step().pulse(".d")
+  .step()
+```
+
+**In** · `fadeIn` `popIn` `scaleIn` `slideIn` `flyIn` `blurIn` `dropIn`\
+**Out** · `fadeOut` `popOut` `scaleOut` `slideOut` `flyOut`\
+**Emphasis** · `pulse` `shake` `wiggle` `flash` `bounce`
+
+::right::
+
+<div class="h-full grid grid-cols-2 grid-rows-2 gap-4 place-items-center">
+  <div class="e-pop w-32 h-20 rounded-xl border-2 border-rose-400 bg-rose-400/10 grid place-items-center font-semibold">popIn</div>
+  <div class="e-slide w-32 h-20 rounded-xl border-2 border-sky-400 bg-sky-400/10 grid place-items-center font-semibold">slideIn</div>
+  <div class="e-drop w-32 h-20 rounded-xl border-2 border-emerald-400 bg-emerald-400/10 grid place-items-center font-semibold">dropIn</div>
+  <div class="e-pulse w-32 h-20 rounded-xl border-2 border-amber-400 bg-amber-400/10 grid place-items-center font-semibold">pulse</div>
+</div>
+
+---
+layout: two-cols
+layoutClass: gap-8
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { useTl } from "slidev-addon-gsap"
+
+const tl = useTl()
+
+onMounted(() => {
+  tl.step()
+    .textTypeIn(".t-type")
+    .step()
+    .textSplitIn(".t-split", { by: "words" })
+    .step()
+    .textSwap(".t-type", "…and switch it live")
+    .step()
+})
+</script>
+
+# `useTl` — text animations
+
+Reveal, hide and switch text. Powered by GSAP's **TextPlugin** (typewriter) and
+**SplitText** (per-char/word/line stagger).
+
+```ts
+tl.step().textTypeIn(".headline")                  // typewriter in
+  .step().textSplitIn(".tagline", { by: "words" }) // chars | words | lines
+  .step().textSwap(".headline", "New text!")   // retype to a new string
+  .step()
+```
+
+**Text** · `textTypeIn` `textTypeOut` `textSwap` `textSplitIn` `textSplitOut`
+
+::right::
+
+<div class="h-full flex flex-col items-center justify-center gap-6 text-center">
+  <div class="t-type text-3xl font-bold text-emerald-500">Type text in</div>
+  <div class="t-split text-xl opacity-80">reveal one word at a time</div>
+</div>
+
+---
+layout: two-cols
+layoutClass: gap-8
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { useTl } from "slidev-addon-gsap"
+
+const tl = useTl()
+
+onMounted(() => {
+  tl.step()
+    .textFlipIn(".s-flip")
+    .step()
+    .textGatherIn(".s-gather")
+    .step()
+    .wipeIn(".s-wipe")
+    .step()
+    .textUnderlineIn(".s-underline")
+    .step()
+    .glitch(".s-flip")
+    .step()
+})
+</script>
+
+# `useTl` — text showcase
+
+Fancier text reveals built on **SplitText** and `clip-path` — each a one-liner,
+slide-scoped, reversible like any other step.
+
+```ts
+tl.step().textFlipIn(".a")        // split-flap rotateX, per char
+  .step().textGatherIn(".b")      // chars converge from scattered
+  .step().wipeIn(".c")            // clip-path wipe, L → R
+  .step().textUnderlineIn(".d")   // underline grows per word
+  .step().glitch(".a")            // cyberpunk glitch emphasis
+```
+
+**Showcase** · `wipeIn` `riseIn` `skewIn` `glitch` `textGatherIn` `textFlipIn` `textUnderlineIn`
+
+::right::
+
+<div class="h-full flex flex-col items-center justify-center gap-5 text-2xl font-semibold">
+  <div class="s-flip text-rose-400">Flip board</div>
+  <div class="s-gather text-sky-400">Gather in</div>
+  <div class="s-wipe text-emerald-400">Wipe reveal</div>
+  <div class="s-underline text-amber-400">Underline grows</div>
+</div>
+
+---
+layout: two-cols
+layoutClass: gap-8
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { useTl } from "slidev-addon-gsap"
+
+const tl = useTl()
+
+onMounted(() => {
+  tl.step()
+    .to(".m-a", {x: 200, duration: 0.4})
+    .step()
+    .morph(".m-a", ".m-b")
+    .step()
+    .morph(".m-b", ".m-c")
+    .step()
+})
+</script>
+
+# `useTl` — morph
+
+`morph(a, b)` transforms element **A** so it fits **B**'s position and size,
+then cross-fades A into B — so A visually *becomes* B. It's a step on the
+timeline, so it reverses on click-back and seeks correctly on refresh.
+
+```ts
+tl.step().morph(".a", ".b") // A → B's box
+  .step().morph(".b", ".c") // B → C's box
+  .step()
+```
+
+Selectors are scoped to the slide, and **B is auto-hidden** until the morph
+reveals it. Options:
+
+```ts
+tl.morph(".a", ".b", {
+  duration: 1,        // default 0.8
+  ease: "power2.inOut",
+  scale: false,       // resize w/h
+})
+```
+
+::right::
+
+<div class="relative h-full">
+  <div class="m-a absolute top-12 left-4 w-24 h-16 rounded-lg border-2 border-rose-400 bg-rose-400/10 flex items-center justify-center font-semibold">A</div>
+  <div class="m-b absolute bottom-14 right-6 w-44 h-28 rounded-xl border-2 border-emerald-400 bg-emerald-400/10 flex items-center justify-center font-semibold">B</div>
+  <div class="m-c absolute bottom-14 left-10 w-10 h-28 rounded-xl border-2 border-amber-400 bg-amber-400/10 flex items-center justify-center font-semibold">C</div>
+</div>
+
+---
+transition: slide-left
+morph:
+  duration: 0.4
+---
+
+# Morph across slides
+
+Give an element on this slide and one on the next the **same `data-morph`** key
+and it animates from where it was — a magic-move *across the slide transition*.
+
+**No setup at all** — the addon wires this globally, so it just works:
+
+```mdc
+---
+transition: slide-left
+morph: { duration: 0.4 }   # the leaving slide owns the effect
+---
+<div data-morph="hero">A</div>
+```
+
+Tune it from **frontmatter** — deck headmatter `morph:` for defaults, the
+**leaving** slide's `morph:` for that transition. Runs **during** any transition
+(here: `slide-left`). Press <kbd>→</kbd>.
+
+<div data-morph="hero" class="absolute bottom-20 right-20 w-32 h-20 rounded-xl border-2 border-violet-400 bg-violet-400/10 flex items-center justify-center text-3xl">A</div>
+
+---
+transition: slide-up
+morph: { duration: 0.4 }
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { useTl } from "slidev-addon-gsap"
+
+const tl = useTl()
+
+onMounted(() => {
+  tl.step()
+    .from("[data-morph=herob]", { opacity: 0, x: -12, duration: 0.4 })
+    .step()
+    .to("[data-morph=herob]", { rotation: 270, y: -50, x: -100, duration: 0.8 })
+    .step()
+})
+</script>
+
+# It morphed here
+
+The **same `data-morph="hero"`** element on this slide.
+It resized and flew into place from the previous slide's card, using the
+morph effect declared on **that** (the leaving) slide.
+
+Click back (<kbd>←</kbd>) and it morphs in reverse.
+
+<div data-morph="hero" class="absolute bottom-16 left-16 w-72 h-48 rounded-2xl border-2 border-violet-400 bg-violet-400/10 flex items-center justify-center text-7xl">A</div>
+
+<div data-morph="herob" class="absolute bottom-16 right-16 w-72 h-48 rounded-2xl border-2 border-amber-400 bg-amber-400/10 flex items-center justify-center text-7xl">B</div>
+
+---
+layout: two-cols
+layoutClass: gap-8
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { useTl } from "slidev-addon-gsap"
+
+const tl = useTl()
+
+onMounted(() => {
+  tl.step()                                      // click 0 → code step 1
+    .from(".note-1", { opacity: 0, x: -12, duration: 0.4 })
+    .step()                                      // click 1 → code morphs (+ y)
+    .from(".note-2", { opacity: 0, x: -12, duration: 0.4 })
+    .step()                                      // click 2 → code morphs (+ z)
+})
+</script>
+
+# Code magic-move + `useTl`
+
+Slidev's built-in `magic-move` and `useTl` ride the **same click axis** — no
+glue needed. Point the block at an absolute click with `{at: N}` and your GSAP
+steps line up with the code morph.
+
+<div class="note-1 mt-5 px-3 py-2 rounded border-l-4 border-sky-400 bg-sky-400/10">① click 1 — add <code>y</code></div>
+<div class="note-2 mt-2 px-3 py-2 rounded border-l-4 border-emerald-400 bg-emerald-400/10">② click 2 — add <code>z</code></div>
+
+<div class="mt-5 text-xs opacity-60">Use an <b>absolute</b> <code>at:</code> — relative <code>+1</code> can't see useTl's steps.</div>
+
+<div class="flex gap-10">
+  <div data-morph="herob" class="mt-10 w-32 h-20 rounded-xl border-2 border-amber-400 bg-amber-400/10 flex items-center justify-center text-3xl">B</div>
+  <div data-morph="hero" class="mt-10 w-32 h-20 rounded-xl border-2 border-violet-400 bg-violet-400/10 flex items-center justify-center text-3xl">A</div>
+</div>
+
+::right::
+
+````md magic-move {at:1}
+```js
+const x = 1
+```
+```js
+const x = 2
+const y = 1
+```
+```js
+const x = 3
+const y = 2
+const z = 1
+```
+````
+
+---
+layout: two-cols
+layoutClass: gap-8
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { usePos, useTwo, useTl } from "slidev-addon-gsap"
+
+const pos = usePos()
+const tl = useTl()
+const two = useTwo()
+
+onMounted(() => {
+  // a dot on three named anchors of the card
+  two.front.mkCircle(".card@tr", 7, { fill: "#ef4444" })
+  two.front.mkCircle(".card@ne", 7, { fill: "#ef4444" })
+  two.front.mkCircle(".card@center", 7, { fill: "#3b82f6" })
+  two.front.mkCircle(".card@bl", 7, { fill: "#10b981" })
+  two.front.mkCircle(".card@sw", 7, { fill: "#10b981" })
+
+  // fan-out: one circle per matching element
+  let multi = two.front.mkCircle(".item@center", 5, { fill: "#f59e0b" })
+
+  tl.step()
+    .to(".card", { scale: 0.5, duration: 0.5 })
+    .to(".card", { rotate: 90, duration: 0.5 })
+    .step()
+    .to(".item", { y: -20, x: 30, rotate: 180, stagger: 0.3, duration: 0.5 })
+    //.to(".item", { y: 0, stagger: 0.1, duration: 0.3 })
+    .to(".item", { y: 0, x: 0, rotate: 0, stagger: 0.3, duration: 0.5 }, "<+0.5")
+    .step()
+})
+</script>
+
+# `usePos` — reactive anchors
+
+`pos("selector@anchor")` resolves a live point on a DOM element — re-measured
+every frame, so it tracks layout, GSAP moves and resizes.
+
+```ts
+const pos = usePos()
+
+// anchors: c · t · b · l · r · tl · tr · bl · br
+pos(".card@tr")     // top-right corner
+pos(".card@center") // (center is the default)
+
+// reactive vector math
+pos(".card@r")[0].add(20, 0) // right edge + 20
+pos(".card@tl")[0].H(other)  // x of other, y of .card
+
+// fan-out — one entry per matching element
+pos(".item@center")            // [p0, p1, p2, …]
+```
+
+::right::
+
+<div class="h-full flex flex-col items-center justify-center gap-10">
+  <div class="card w-44 h-28 rounded-xl border-2 border-gray bg-white/10 flex items-center justify-center font-semibold text-gray">.card</div>
+  <div class="flex gap-8">
+    <div class="item w-12 h-12 rounded-lg border-1 border-amber-400 bg-amber-500/10"></div>
+    <div class="item w-12 h-12 rounded-lg border-1 border-amber-400 bg-amber-500/10"></div>
+    <div class="item w-12 h-12 rounded-lg border-1 border-amber-400 bg-amber-500/10"></div>
+  </div>
+  <div class="text-xs opacity-50">red = @tr · blue = @center · green = @bl · amber = @center (fan-out)</div>
+</div>
+
+---
+layout: two-cols
+layoutClass: gap-8
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { usePos, useTwo, useTl } from "slidev-addon-gsap"
+
+const pos = usePos()
+const two = useTwo()
+const tl = useTl()
+
+onMounted(() => {
+  const arrow = two.back.mkArrow(".a-from@r", ".a-to@l", {
+    linewidth: 3, stroke: "#0ea5e9",
+  })
+
+  tl.step()
+    .from(arrow, { end: 0, duration: 0.5 })   // draw the arrow on
+    .step()
+    .to(".a-to", { x: 100, duration: 0.8, ease: "power2.inOut" })
+    .step()
+    .to(".a-to", { rotate: 360, duration: 2, ease: "power2.inOut" })
+    .step()
+})
+</script>
+
+# `useTwo` — reactive arrows
+
+`mkArrow(from, to, props)` draws a Two.js arrow whose endpoints are resolved
+**every frame**. Pass anchor strings directly — no `pos()` wrapper needed.
+
+```ts
+const arrow = two.back.mkArrow(".a@r", ".b@l", {
+  linewidth: 3, stroke: "#0ea5e9",
+})
+
+tl.step()
+  .from(arrow, { end: 0 }) // draw it
+  .step()
+  .to(".b", { x: 100 }) // move the target…
+  .step()               // …arrow follows live
+```
+
+::right::
+
+<div class="h-full flex items-center gap-28 pl-6">
+  <div class="a-from w-24 h-16 rounded-lg border-2 border-gray-700 bg-white/10 flex items-center justify-center font-semibold">A</div>
+  <div class="a-to w-24 h-16 rounded-lg border-2 border-sky-500 bg-sky-500/10 flex items-center justify-center font-semibold">B</div>
+</div>
+
+---
+layout: two-cols
+layoutClass: gap-8
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { usePos, useTwo, useTl } from "slidev-addon-gsap"
+
+const pos = usePos()
+const two = useTwo()
+const tl = useTl()
+
+onMounted(() => {
+  let x = { val: 30 }
+  const path = two.back.mkPath({
+      linewidth: 3, stroke: "#6366f1", head: "triangle", radius: 14,
+      text: { text: "route", background: "white", },
+    })
+    .M(".p-from@r")
+    .h(() => x.val)
+    .VH(".p-to@l")
+
+  tl.step()
+    .from(path, { end: 0, duration: 0.9 })
+    .step()
+    .to('.p-to', { y: -100, duration: 0.5 })
+    .step()
+    .to(x, { val: 150, duration: 0.8 })
+    .step()
+})
+</script>
+
+# `useTwo` — SVG-style paths
+
+`mkPath` is config-first; the first point is a `.M()` command, then chain
+SVG-like commands. Upper-case = absolute, lower-case = relative.
+
+```ts
+two.back.mkPath({
+    stroke: "#6366f1",
+    head: "triangle",
+    radius: 14,
+    text: "route",   // label at the midpoint
+  })
+  .M(".p-from@r") // moveto (start)
+  .h(28)          // relative h-line
+  .V(".p-to@l")   // absolute v-line
+  .H(".p-to@l")   // absolute h-line (try VH instead)
+  // (.L .Z … also exist)
+  // also try the VH, HV, VHV, and HVH
+```
+
+`radius` rounds the corners, `head` adds an arrowhead, and `from(path,{end:0})`
+animates it.
+
+::right::
+
+::div{.relative .h-full}
+  :div[A]{class="p-from absolute top-10 left-2 w-24 h-14 rounded-lg border-2 border-indigo-500 bg-indigo-500/10 flex items-center justify-center font-semibold"}
+  :div[B]{class="p-to absolute bottom-10 right-4 w-24 h-14 rounded-lg border-2 border-indigo-500 bg-indigo-500/10 flex items-center justify-center font-semibold"}
+::
+
+---
+layout: two-cols
+layoutClass: gap-8
+---
+
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { usePos, useTwo, useTl } from "slidev-addon-gsap"
+
+const pos = usePos()
+const two = useTwo()
+const tl = useTl()
+
+onMounted(() => {
+  // back layer sits behind slide content; front layer above it
+  const back  = two.back.mkCircle(".stack@tr", 50,
+    { fill: "#60a5fa66", stroke: "#3b82f6", linewidth: 3 })
+  const front = two.front.mkCircle(".stack@br", 25,
+    { fill: "#34d39988", stroke: "#10b981", linewidth: 3 })
+
+  tl.step()
+    .from([back, front], { scale: 0, duration: 0.4, stagger: 0.12 })
+    .step()
+})
+</script>
+
+# `useTwo` — circles & layers
+
+`mkCircle(center, radius, props)`. Every `useTwo` exposes two layers:
+`two.back` renders **behind** the slide's HTML, `two.front` **on top** of it.
+
+```ts
+two.back.mkCircle(".stack@tr",
+  50, { fill: "#60a5fa66" })  // behind
+two.front.mkCircle(".stack@br",
+  25, { fill: "#34d39988" }) // on top
+```
+
+The blue ring is occluded by the card (it's on the back layer); the green disk
+covers it (front layer).
+
+::right::
+
+<div class="h-full flex items-center justify-center z-10">
+  <div class="stack w-24 h-24 rounded-xl border-2 dark:border-white border-gray-400 dark:bg-black bg-white flex items-center justify-center font-semibold">card</div>
+</div>
+
+---
+layout: center
+---
+
+# Cheat sheet
+
+```ts
+import { useTl, usePos, useTwo, useSlide } from "slidev-addon-gsap"
+
+const tl  = useTl()        // paused, click-driven GSAP timeline
+const pos = usePos()       // reactive DOM anchors
+const two = useTwo()       // Two.js front/back drawing layers
+
+// — timeline — clicks are inferred from step() count
+tl.step().from(".x", { opacity: 0 }).step().to(".x", { x: 100 }).step()
+tl.step().morph(".a", ".b").step()   // A fits onto B + cross-fades (magic-move)
+
+// — preset effects — chainable, good defaults; override with GSAP vars
+tl.step().popIn(".a").step().slideIn(".b", { from: "left" }).step().pulse(".b").step()
+//   in: fadeIn popIn scaleIn slideIn flyIn blurIn dropIn · out: *Out · emphasis: pulse shake wiggle flash bounce
+
+// — cross-slide morph — fully automatic (no setup); any transition
+//   same data-morph="key" on adjacent slides → <div data-morph="hero"/> flies between them
+//   tune via frontmatter:  morph: { duration: 1.1, ease: power2.inOut }   (deck or per-slide)
+
+// — code magic-move — Slidev's magic-move block shares the click axis with useTl
+//   place it with an absolute {at: N} so code morphs line up with your tl steps
+
+// — positions — "selector@anchor"
+//   axis-aligned: c t b l r tl tr bl br   ·   rotation-aware: n s e w ne nw se sw
+pos(".box@tr")            // → reactive point(s); [i] for one; .add/.sub/.H/.V
+
+// — drawing — pass anchor strings directly; endpoints stay live
+two.back.mkArrow(".a@r", ".b@l", { stroke: "#0ea5e9", linewidth: 3 })
+two.back.mkPath({ head: "triangle", radius: 14 }).M(".a@r").h(28).V(".b@l").H(".b@l")
+two.front.mkCircle(".c@center", 40, { fill: "#34d399" })
+
+// draw shapes on with:  tl.from(shape, { end: 0 })
+```

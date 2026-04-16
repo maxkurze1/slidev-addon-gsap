@@ -1,0 +1,40 @@
+{
+  "name": "slidev-addon-gsap",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Integrate GSAP animations into SliDev",
+  "packageManager": "pnpm@10.33.2",
+  "exports": {
+    ".": "./index.ts",
+    "./*": "./*"
+  },
+  "keywords": [
+    "slidev-addon",
+    "slidev",
+    "GSAP"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "slidev build example.mdc",
+    "dev": "slidev example.mdc --remote",
+    "export": "slidev export example.mdc",
+    "screenshot": "slidev export example.mdc --format png",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "dependencies": {
+    "@slidev/client": "^52.15.0",
+    "@slidev/theme-default": "^0.25.0",
+    "@slidev/types": "^52.15.0",
+    "gsap": "^3.15.0",
+    "katex": "^0.16.45",
+    "two.js": "^0.8.23"
+  },
+  "devDependencies": {
+    "@slidev/cli": "^52.15.0",
+    "vitepress": "^1.6.4"
+  }
+}
