@@ -103,5 +103,9 @@ export default defineConfig({
     ],
 
     search: { provider: 'local' },
+
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/maxkurze1/slidev-addon-gsap' },
+    ],
   },
 })
