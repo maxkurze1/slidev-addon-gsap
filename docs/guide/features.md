@@ -31,7 +31,7 @@ tl.step()
   .pulse('.b')
 ```
 
-Entrances, exits and emphasis — 17 presets, each overridable with any GSAP var.
+Entrances, exits and emphasis — 20+ presets, each overridable with any GSAP var.
 
 ## Reactive anchors — [`usePos`](./use-pos)
 
