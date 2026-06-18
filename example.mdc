@@ -2,6 +2,10 @@
 title: "GSAP × Two.js for Slidev"
 author: "Max Kurze"
 comark: true
+# Hash-based routing so deep links work on static hosts (GitHub Pages) without
+# SPA fallback: routes live in the URL fragment (e.g. /demo/#/5), which the
+# browser never sends to the server, so every path resolves to demo/index.html.
+routerMode: hash
 ---
 
 <script setup lang="ts">
