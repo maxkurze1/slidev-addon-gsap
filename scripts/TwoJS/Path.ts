@@ -6,7 +6,14 @@ import type { Anchor as AnchorT } from "two.js/src/anchor";
 
 const { Group, Anchor, Commands } = Two
 
-import { resolveVec, TwoLike, requireTwoInstance, applyDashPattern } from "./util";
+import {
+  resolveVec,
+  TwoLike,
+  AnchorLike,
+  requireTwoInstance,
+  expandPositions,
+  applyDashPattern,
+} from "./util";
 import {
   resolvePathHead,
 } from "./heads";
@@ -550,10 +557,11 @@ export class Path extends Group {
   }
 
   /**
-   * @name Two.Arrow#_update
+   * @name Two.Path#_update
    * @function
    * @private
-   * @description Overrides Path._update to update the arrow head automatically
+   * @description Re-resolve geometry, head, dashes and label every frame so the
+   * path stays live as its referenced positions move.
    */
   _update() {
     this._syncGeometry();
@@ -579,4 +587,34 @@ export function makePath(
   Object.assign(path, props);
 
   return path;
+}
+
+// An arrow is just a straight path with an arrowhead. `mkArrow(from, to)` is
+// shorthand for `mkPath({ head: true }).M(from).L(to)`; the tip scales with
+// `linewidth` like every other path head (pass `head` to pick a different tip,
+// or `head: false` for none). A selector matching multiple elements fans out to
+// one arrow per element, mirroring `mkPath`.
+export function makeArrow(
+  two: TwoLike,
+  from: AnchorLike | AnchorLike[],
+  to: AnchorLike | AnchorLike[],
+  props: Record<string, any> = {},
+): Path | Path[] | null {
+  const instance = requireTwoInstance(two, "makeArrow");
+
+  const { items: fromArr, isArray: fromIsArray } = expandPositions(from);
+  const { items: toArr, isArray: toIsArray } = expandPositions(to);
+
+  const paths: Path[] = [];
+  for (const f of fromArr) {
+    for (const t of toArr) {
+      paths.push(makePath(instance, { head: true, ...props }).M(f).L(t));
+    }
+  }
+
+  if ((!fromIsArray && !toIsArray) || paths.length <= 1) {
+    return paths[0] ?? null;
+  }
+
+  return paths;
 }

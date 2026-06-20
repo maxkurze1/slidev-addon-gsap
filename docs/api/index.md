@@ -137,13 +137,13 @@ Returns an object with two drawing layers and front-layer shortcuts:
 ### mkArrow
 
 ```ts
-two.back.mkArrow(from, to, props?) → Arrow | Arrow[] | null
+two.back.mkArrow(from, to, props?) → Path | Path[] | null
 ```
 
-`from`/`to` are anchor strings (`'.a@r'`), elements, points, or arrays
-(fan-out). Props: `stroke`, `linewidth`, `headlen`, `text` / `label`,
-`dashed` / `dashes` / `dashOffset` (see [Dashed strokes](/guide/use-two#dashed-strokes)),
-plus `start`/`end` (0 - 1).
+Shorthand for `mkPath({ head: true, …props }).M(from).L(to)`, so it accepts
+every `mkPath` prop. `from`/`to` are anchor strings (`'.a@r'`), elements,
+points, or arrays (fan-out). The arrowhead scales with `linewidth`; pass
+`head` for a different tip or `head: false` for a plain line.
 
 ### mkPath
 
@@ -191,7 +191,7 @@ Props: `fill`, `stroke`, `linewidth`, `radius`.
 twojs:
   defaults: { linewidth: 2, stroke: "#695FAB" }
   path:     { head: triangle, radius: 10 }
-  arrow:    { headlen: 14 }
+  arrow:    { head: stealth }
   circle:   { fill: none }
 ---
 ```

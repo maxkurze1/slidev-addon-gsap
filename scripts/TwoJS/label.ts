@@ -26,7 +26,7 @@ export interface LabelOptions {
   padding?: number;
 }
 
-// What `text`/`label` props accept on Path/Arrow.
+// What `text`/`label` props accept on a Path.
 export type LabelInput = string | LabelOptions | null | undefined | false;
 
 export function normalizeLabel(input: LabelInput): LabelOptions | null {
@@ -41,8 +41,8 @@ export function normalizeLabel(input: LabelInput): LabelOptions | null {
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
 /**
- * A text label that rides along a Two.js path/arrow shaft. Lives as a child of
- * the Path/Arrow group; `update()` repositions it every frame so it tracks the
+ * A text label that rides along a Two.js path shaft. Lives as a child of
+ * the Path group; `update()` repositions it every frame so it tracks the
  * (reactive) geometry and the drawn-on portion.
  */
 export class PathLabel extends Group {

@@ -1,12 +1,13 @@
 # `useTwo` — arrows, paths & circles
 
+<TwoDemo class="my-5" />
+
+<!-- <small>Illustrative — the real shapes are bound to slide elements and animate.</small> -->
+
 `useTwo()` gives you two [Two.js](https://two.js.org/) drawing layers per slide:
 `two.back` renders **behind** the slide's HTML, `two.front` **on top**. Pass
 [`usePos`](./use-pos) anchor strings directly — endpoints stay reactive.
 
-<TwoDemo />
-
-<small>Illustrative — the real shapes are bound to slide elements and animate.</small>
 
 ```vue
 <script setup lang="ts">
@@ -28,17 +29,23 @@ layer; use `two.back.*` for the back layer (or `two.layer('back')`).
 
 ## Arrows — `mkArrow(from, to, props?)`
 
-Endpoints are resolved every frame. A selector matching multiple elements
+`mkArrow(from, to, props)` is shorthand for a straight [path](#paths-mkpath-props-m-start)
+with an arrowhead — `mkPath({ head: true, …props }).M(from).L(to)`. So it takes
+every path prop (`head`, `radius`, `dashed`, `text`, `start`/`end`, …).
+Endpoints are resolved every frame, and a selector matching multiple elements
 **fans out** to one arrow per element.
 
 ```ts
 two.back.mkArrow('.a@r', '.b@l', {
   stroke: '#0ea5e9', linewidth: 3,
-  headlen: 14,            // arrowhead size
+  head: 'stealth',        // any tip name (default true = a straight barb)
   dashed: true,           // dashed shaft (see "Dashed strokes" below)
   text: 'flows to',       // label riding the shaft (string or options object)
 })
 ```
+
+The arrowhead **scales with `linewidth`** like every other path head (there is
+no separate `headlen`); pass `head: false` for a plain line.
 
 ## Paths — `mkPath(props?).M(start)…`
 
@@ -154,7 +161,7 @@ Set defaults once in the deck headmatter under `twojs:`:
 twojs:
   defaults: { linewidth: 2, stroke: "#695FAB" }
   path:     { head: triangle, radius: 10 }
-  arrow:    { headlen: 14 }
+  arrow:    { head: stealth }
   circle:   { fill: none }
 ---
 ```

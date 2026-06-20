@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import Two from 'two.js'
-import { makeArrow } from '../../../scripts/TwoJS/Arrow'
-import { makePath } from '../../../scripts/TwoJS/Path'
+import { makeArrow, makePath } from '../../../scripts/TwoJS/Path'
 import { makeCircle } from '../../../scripts/TwoJS/Circle'
 
 // Illustrative preview of the kind of shapes `useTwo` draws. These are the
@@ -57,7 +56,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="my-4 flex justify-center border border-divider rounded-xl bg-bgsoft p-3">
+  <div class="flex justify-center border border-divider rounded-xl bg-bgsoft p-3">
     <div ref="host" class="two-host" />
   </div>
 </template>

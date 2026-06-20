@@ -191,6 +191,10 @@ Path commands (uppercase = absolute, lowercase = relative to current point):
   and the shaft is truncated so the tip touches the endpoint exactly.
 
 Other notes:
+- `mkArrow(from, to, props)` is just shorthand for `mkPath({ head: true,
+  ...props }).M(from).L(to)`, so it takes every path prop. The arrowhead scales
+  with `linewidth` (no `headlen`); pass `head` for a different tip / `head: false`
+  for a plain line.
 - `text` / `label` prop on arrows & paths draws a label that rides the shaft
   (string, or `{ text, at, offset, rotate, background, fill, size }`).
 - **Dashed strokes** on arrows & paths (the head stays solid): `dashed: true`
@@ -206,7 +210,7 @@ Other notes:
   twojs:
     defaults: { linewidth: 2, stroke: "#695FAB" }
     path:     { head: triangle, radius: 10 }
-    arrow:    { headlen: 14 }
+    arrow:    { head: stealth }
     circle:   { fill: none }
   ---
   ```
