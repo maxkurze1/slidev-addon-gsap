@@ -203,169 +203,172 @@ export class Path extends Group {
     }
   }
 
+  // Round every corner of the sharp geometry by inserting a circular-arc fillet
+  // between each pair of adjacent straight segments.
+  //
+  // The sharp geometry only ever contains `move`, `line` and `close` anchors
+  // (the user never enters curves), so it is just a list of polylines. We split
+  // it into those polylines ("subpaths"), round each interior corner, and
+  // rebuild a fresh vertex list.
+  //
+  // Returns the rounded vertices, or null when nothing could be rounded — in
+  // which case the caller keeps the sharp geometry as-is.
   _buildRoundedCurveVertices(): AnchorT[] | null {
     if (this._radius <= 0) return null;
 
-    const EPS = 1e-6;
     const source = this._shaft.vertices;
     if (source.length < 3) return null;
 
-    const rounded: AnchorT[] = [new Anchor().copy(source[0])];
-    let changed = false;
+    const EPS = 1e-6;
+    const ANGLE_EPS = 1e-3;
 
-    type Fillet = {
-      entry: Vector;
-      exit: Vector;
-      r: number;
-      sweepFlag: number;
+    type Point = { x: number; y: number };
+
+    // Group the flat anchor list into polylines. A `move` opens a new subpath; a
+    // `close` marks the current one as closed (its last point wraps back to the
+    // first). The `close` anchor sits on the first point, so it adds no vertex.
+    const subpaths: Array<{ points: Point[]; closed: boolean }> = [];
+    for (const a of source) {
+      if (a.command === Commands.move || subpaths.length === 0) {
+        subpaths.push({ points: [{ x: a.x, y: a.y }], closed: false });
+      } else if (a.command === Commands.close) {
+        subpaths[subpaths.length - 1].closed = true;
+      } else {
+        subpaths[subpaths.length - 1].points.push({ x: a.x, y: a.y });
+      }
+    }
+
+    // Direction-and-angle data for a single corner, independent of how far the
+    // fillet is eventually trimmed back. `desired` is the trim length that gives
+    // the full requested radius; `inLen`/`outLen` are the adjacent segment
+    // lengths. Null for degenerate corners (zero-length segment, straight line
+    // or full reversal), which stay sharp.
+    type Corner = {
+      ix: number; iy: number; ox: number; oy: number;
+      tanHalf: number; sweepFlag: number;
+      desired: number; inLen: number; outLen: number;
     };
 
-    const buildFillet = (prev: Vector, curr: Vector, next: Vector): Fillet | null => {
-      const inDir = new Vector(curr.x - prev.x, curr.y - prev.y);
-      const outDir = new Vector(next.x - curr.x, next.y - curr.y);
-      const len1 = Math.hypot(inDir.x, inDir.y);
-      const len2 = Math.hypot(outDir.x, outDir.y);
+    const cornerGeom = (prev: Point, curr: Point, next: Point): Corner | null => {
+      const inX = curr.x - prev.x, inY = curr.y - prev.y;
+      const outX = next.x - curr.x, outY = next.y - curr.y;
+      const inLen = Math.hypot(inX, inY);
+      const outLen = Math.hypot(outX, outY);
+      if (inLen <= EPS || outLen <= EPS) return null;
 
-      if (len1 <= EPS || len2 <= EPS) return null;
+      const ix = inX / inLen, iy = inY / inLen;
+      const ox = outX / outLen, oy = outY / outLen;
 
-      inDir.x /= len1;
-      inDir.y /= len1;
-      outDir.x /= len2;
-      outDir.y /= len2;
-
-      const dot = Math.max(-1, Math.min(1, inDir.x * outDir.x + inDir.y * outDir.y));
-      const turn = Math.acos(dot);
-      if (turn <= 1e-3 || Math.abs(Math.PI - turn) <= 1e-3) return null;
+      // Angle between the two segment directions (0 = straight, π = reversal).
+      const turn = Math.acos(Math.max(-1, Math.min(1, ix * ox + iy * oy)));
+      if (turn <= ANGLE_EPS || Math.PI - turn <= ANGLE_EPS) return null;
 
       const tanHalf = Math.tan(turn / 2);
-      if (Math.abs(tanHalf) <= EPS) return null;
-
-      const desiredRadius = Math.max(0, this._radius);
-      // For this `turn` definition (angle between tangents), trim distance is:
-      // d = r * tan(turn / 2)
-      let d = desiredRadius * tanHalf;
-      d = Math.min(d, len1, len2);
-      if (d <= EPS) return null;
-
-      // If segments are too short, this is the maximal tangent-continuous radius.
-      const r = d / tanHalf;
-      if (r <= EPS) return null;
-
-      const entry = new Vector(curr.x - inDir.x * d, curr.y - inDir.y * d);
-      const exit = new Vector(curr.x + outDir.x * d, curr.y + outDir.y * d);
-      const cross = inDir.x * outDir.y - inDir.y * outDir.x;
-      const sweepFlag = cross > 0 ? 1 : 0;
-
-      return { entry, exit, r, sweepFlag };
+      return {
+        ix, iy, ox, oy, tanHalf,
+        sweepFlag: ix * oy - iy * ox > 0 ? 1 : 0,
+        desired: this._radius * tanHalf,
+        inLen, outLen,
+      };
     };
 
-    const pushLineTo = (p: Vector) => {
-      rounded.push(new Anchor(p.x, p.y, undefined, undefined, undefined, undefined, Commands.line));
+    type Fillet = { entry: Point; exit: Point; radius: number; sweepFlag: number };
+
+    // Realise a corner as a fillet, trimmed back by `trim` from the corner. The
+    // arc radius scales down with the trim so it stays tangent to both segments.
+    const buildFillet = (c: Corner, curr: Point, trim: number): Fillet | null => {
+      if (trim <= EPS) return null;
+      return {
+        entry: { x: curr.x - c.ix * trim, y: curr.y - c.iy * trim },
+        exit: { x: curr.x + c.ox * trim, y: curr.y + c.oy * trim },
+        radius: trim / c.tanHalf,
+        sweepFlag: c.sweepFlag,
+      };
     };
 
-    const pushArcTo = (f: Fillet) => {
+    const out: AnchorT[] = [];
+    let changed = false;
+
+    const push = (cmd: any, x: number, y: number) =>
+      out.push(new Anchor(x, y, undefined, undefined, undefined, undefined, cmd));
+
+    // A rounded corner: a straight run up to the entry tangent, then the arc.
+    const pushFillet = (f: Fillet) => {
+      changed = true;
+      push(Commands.line, f.entry.x, f.entry.y);
       const arc = new Anchor(f.exit.x, f.exit.y, undefined, undefined, undefined, undefined, Commands.arc);
-      arc.rx = f.r;
-      arc.ry = f.r;
+      arc.rx = arc.ry = f.radius;
       arc.xAxisRotation = 0;
       arc.largeArcFlag = 0;
       arc.sweepFlag = f.sweepFlag;
-      rounded.push(arc);
+      out.push(arc);
     };
 
-    const pushFillet = (f: Fillet) => {
-      changed = true;
-      pushLineTo(f.entry);
-      pushArcTo(f);
-    };
+    for (const { points, closed } of subpaths) {
+      const n = points.length;
+      if (n === 0) continue;
 
-    const computeCornerFillets = (runPoints: Vector[], isClosed: boolean): Array<Fillet | null> => {
-      const cornerFillets: Array<Fillet | null> = new Array(runPoints.length).fill(null);
-      if (isClosed && runPoints.length >= 3) {
-        for (let i = 0; i < runPoints.length; i++) {
-          const prev = runPoints[(i - 1 + runPoints.length) % runPoints.length];
-          const curr = runPoints[i];
-          const next = runPoints[(i + 1) % runPoints.length];
-          cornerFillets[i] = buildFillet(prev, curr, next);
+      const isClosed = closed && n >= 3;
+      const wrap = (i: number) => (i % n + n) % n;
+      // Only interior points are corners; the two endpoints of an open subpath
+      // are not rounded.
+      const isCorner = (i: number) => isClosed || (i >= 1 && i <= n - 2);
+
+      const corners = points.map((_, i) =>
+        isCorner(i) ? cornerGeom(points[wrap(i - 1)], points[i], points[wrap(i + 1)]) : null,
+      );
+
+      // Trim length per corner. Start at the full requested radius, but never
+      // longer than either adjacent segment.
+      const trims = corners.map((c) => (c ? Math.min(c.desired, c.inLen, c.outLen) : 0));
+
+      // Two corners share the segment between them. If their trims together
+      // exceed its length they would overlap, so shrink both proportionally
+      // until they exactly meet — the two arcs then connect with no straight
+      // bit in between. A closed subpath also shares its wrap-around segment.
+      const segmentCount = isClosed ? n : n - 1;
+      for (let k = 0; k < segmentCount; k++) {
+        const a = k, b = wrap(k + 1);
+        if (!corners[a] || !corners[b]) continue;
+        const segLen = Math.hypot(points[b].x - points[a].x, points[b].y - points[a].y);
+        const total = trims[a] + trims[b];
+        if (total > segLen && total > EPS) {
+          const scale = segLen / total;
+          trims[a] *= scale;
+          trims[b] *= scale;
         }
-        return cornerFillets;
       }
 
-      for (let i = 1; i < runPoints.length - 1; i++) {
-        cornerFillets[i] = buildFillet(runPoints[i - 1], runPoints[i], runPoints[i + 1]);
-      }
-      return cornerFillets;
-    };
-
-    const pushRoundedRun = (runPoints: Vector[], isClosed = false, startAnchorIndex = -1) => {
-      if (runPoints.length < 2) return;
-
-      const cornerFillets = computeCornerFillets(runPoints, isClosed);
+      const filletAt = (i: number) =>
+        corners[i] ? buildFillet(corners[i]!, points[i], trims[i]) : null;
 
       if (isClosed) {
-        const startFillet = cornerFillets[0];
-        if (startAnchorIndex >= 0) {
-          const startAnchor = rounded[startAnchorIndex];
-          const p = startFillet ? startFillet.exit : runPoints[0];
-          startAnchor.x = p.x;
-          startAnchor.y = p.y;
+        // Closing the loop rounds the start corner too, so the path no longer
+        // starts at points[0] but at that corner's exit tangent.
+        const start = filletAt(0);
+        const head = start ? start.exit : points[0];
+        push(Commands.move, head.x, head.y);
+
+        for (let i = 1; i < n; i++) {
+          const f = filletAt(i);
+          if (f) pushFillet(f);
+          else push(Commands.line, points[i].x, points[i].y);
         }
 
-        for (let i = 1; i < runPoints.length; i++) {
-          const f = cornerFillets[i];
-          if (!f) {
-            pushLineTo(runPoints[i]);
-            continue;
-          }
-          pushFillet(f);
+        // Wrap around the start corner to rejoin the head point.
+        if (start) pushFillet(start);
+        else push(Commands.line, points[0].x, points[0].y);
+      } else {
+        push(Commands.move, points[0].x, points[0].y);
+        for (let i = 1; i < n; i++) {
+          const f = filletAt(i);
+          if (f) pushFillet(f);
+          else push(Commands.line, points[i].x, points[i].y);
         }
-
-        if (startFillet) {
-          pushFillet(startFillet);
-        } else {
-          pushLineTo(runPoints[0]);
-        }
-        return;
       }
-
-      for (let i = 1; i < runPoints.length; i++) {
-        const f = i < runPoints.length - 1 ? cornerFillets[i] : null;
-        if (!f) {
-          pushLineTo(runPoints[i]);
-          continue;
-        }
-        pushFillet(f);
-      }
-    };
-
-    let lineRun: Vector[] = [];
-    let lineRunStartAnchorIndex = -1;
-    for (let i = 1; i < source.length; i++) {
-      const current = source[i];
-      const previous = source[i - 1];
-
-      if (current.command === Commands.line) {
-        if (lineRun.length === 0) {
-          lineRunStartAnchorIndex = rounded.length - 1;
-          lineRun.push(new Vector(previous.x, previous.y));
-        }
-        lineRun.push(new Vector(current.x, current.y));
-        continue;
-      }
-
-      if (lineRun.length > 0) {
-        pushRoundedRun(lineRun, current.command === Commands.close, lineRunStartAnchorIndex);
-        lineRun = [];
-        lineRunStartAnchorIndex = -1;
-      }
-      rounded.push(new Anchor().copy(current));
     }
 
-    if (lineRun.length > 0) {
-      pushRoundedRun(lineRun, false, lineRunStartAnchorIndex);
-    }
-
-    return changed ? rounded : null;
+    return changed ? out : null;
   }
 
   _syncGeometry() {
