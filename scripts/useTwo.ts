@@ -6,7 +6,7 @@ import Two from "two.js";
 import { createRefProxy } from "./proxxyref";
 import { makeArrow } from "./TwoJS/Arrow";
 import { makePath } from "./TwoJS/Path";
-import { maxCircle } from "./TwoJS/Circle";
+import { makeCircle } from "./TwoJS/Circle";
 import { onSlideEnter, onSlideLeave } from "./util";
 import { slideWidth, slideHeight, configs } from "@slidev/client";
 
@@ -16,7 +16,7 @@ type LayerName = "front" | "back";
 type LayerApi = {
   mkArrow: (...args: Tail<Parameters<typeof makeArrow>>) => ReturnType<typeof makeArrow>;
   mkPath: (...args: Tail<Parameters<typeof makePath>>) => ReturnType<typeof makePath>;
-  mkCircle: (...args: Tail<Parameters<typeof maxCircle>>) => ReturnType<typeof maxCircle>;
+  mkCircle: (...args: Tail<Parameters<typeof makeCircle>>) => ReturnType<typeof makeCircle>;
 };
 
 type TwoWithLayers = LayerApi & {
@@ -91,7 +91,7 @@ function createLayerApi(two: Two, config: TwoConfig): LayerApi {
     mkPath: (props) =>
       makePath(two, mergeProps(base, config.path, props)),
     mkCircle: (center, radius, props) =>
-      maxCircle(two, center, radius, mergeProps(base, config.circle, props)),
+      makeCircle(two, center, radius, mergeProps(base, config.circle, props)),
   };
 }
 

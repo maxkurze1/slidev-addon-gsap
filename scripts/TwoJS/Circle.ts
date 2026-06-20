@@ -140,6 +140,3 @@ export function makeCircle(
 
   return circles;
 }
-
-// Alias requested by name in prompt.
-export const maxCircle = makeCircle;

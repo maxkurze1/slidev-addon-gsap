@@ -2,59 +2,66 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import Two from 'two.js'
 import { gsap } from 'gsap'
+import { makePath } from '../../../scripts/TwoJS/Path'
+import { makeCircle } from '../../../scripts/TwoJS/Circle'
+import { toGsapTargets } from '../../../scripts/TwoJS/util'
 
-// Interactive "draw-on" preview: a routed path + arrowhead + circle animate in,
-// the way `tl.from(shape, { end: 0 })` reveals shapes in a deck. Two.js + GSAP
-// run directly here; the real useTwo binds the endpoints to slide elements.
+// Interactive "draw-on" preview. This builds the SAME shapes a slide would via
+// `useTwo`: a routed `mkPath` (rounded elbow + triangle head + riding label) and
+// an `mkCircle`. The only thing the real composable adds on top is binding the
+// endpoints to live slide elements — here we hand the factories a plain Two
+// instance and literal coordinates so it can run inside the docs.
 
 const host = ref<HTMLElement | null>(null)
-let two: any = null
-let path: any, head: any, circle: any, label: any
+let two: Two | null = null
+let path: any, circle: any
 
 function build() {
   const stroke = getComputedStyle(document.documentElement)
     .getPropertyValue('--vp-c-brand-1').trim() || '#646cff'
 
-  two = new Two({ width: 460, height: 220 }).appendTo(host.value)
+  two = new Two({ width: 460, height: 220 }).appendTo(host.value!)
 
-  // routed elbow path (like mkPath().M().V().H())
-  path = two.makePath(60, 40, 60, 150, 250, 150, false)
-  path.noFill(); path.stroke = stroke; path.linewidth = 3
-  path.cap = 'round'; path.join = 'round'; path.curved = false
+  // Routed elbow path with a rounded corner, an arrow head, and a label that
+  // rides along the drawn-on portion — all built-in to the project's Path.
+  path = makePath(two, {
+    stroke,
+    linewidth: 3,
+    radius: 16,
+    head: 'triangle',
+  })
+    .M(60, 40)
+    .V(60, 150)
+    .H(250, 150)
 
-  // arrowhead at the end
-  head = two.makePath(242, 144, 256, 150, 242, 156, true)
-  head.fill = stroke; head.noStroke()
-
-  // circle that pops in
-  circle = two.makeCircle(372, 96, 46)
-  circle.stroke = stroke; circle.linewidth = 3
-  circle.fill = 'color-mix(in srgb, ' + stroke + ' 14%, transparent)'
-
-  label = two.makeText('draw-on', 150, 182)
-  label.size = 13; label.fill = stroke
+  // Reactive circle that pops in.
+  circle = makeCircle(two, { x: 372, y: 96 }, 46, {
+    stroke,
+    linewidth: 3,
+    fill: 'color-mix(in srgb, ' + stroke + ' 14%, transparent)',
+  })
 
   play()
 }
 
 function play() {
   if (!gsap || !two) return
-  gsap.killTweensOf([path, head, circle, label])
-  path.ending = 0
-  head.opacity = 0
+  const targets = toGsapTargets([path, circle])
+  gsap.killTweensOf(targets)
+
+  // `path.end` reveals the shaft; the head and label follow it automatically.
+  path.end = 0
   circle.scale = 0
-  label.opacity = 0
   two.update()
-  gsap.timeline({ onUpdate: () => two.update() })
-    .to(path, { ending: 1, duration: 1, ease: 'power1.inOut' })
-    .to(head, { opacity: 1, duration: 0.2 }, '-=0.05')
-    .to(circle, { scale: 1, duration: 0.5, ease: 'back.out(1.7)' }, 0.35)
-    .to(label, { opacity: 1, duration: 0.3 }, 0.2)
+
+  gsap.timeline({ onUpdate: () => two!.update() })
+    .to(toGsapTargets(path), { end: 1, duration: 1, ease: 'power1.inOut' })
+    .to(toGsapTargets(circle), { scale: 1, duration: 0.5, ease: 'back.out(1.7)' }, 0.35)
 }
 
 onMounted(build)
 onUnmounted(() => {
-  gsap?.killTweensOf?.([path, head, circle, label])
+  gsap?.killTweensOf?.(toGsapTargets([path, circle]))
   two?.pause?.()
   if (host.value) host.value.innerHTML = ''
 })
