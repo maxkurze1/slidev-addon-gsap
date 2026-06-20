@@ -12,6 +12,7 @@ import FromToDemo from './FromToDemo.vue'
 import MorphDemo from './MorphDemo.vue'
 import IntroDemo from './IntroDemo.vue'
 import TextEffectsDemo from './TextEffectsDemo.vue'
+import ArrowHeadsGallery from './ArrowHeadsGallery.vue'
 
 export default {
   extends: DefaultTheme,
@@ -30,5 +31,6 @@ export default {
     app.component('MorphDemo', MorphDemo)
     app.component('IntroDemo', IntroDemo)
     app.component('TextEffectsDemo', TextEffectsDemo)
+    app.component('ArrowHeadsGallery', ArrowHeadsGallery)
   }
 } satisfies Theme

@@ -23,6 +23,13 @@ onMounted(() => {
   const t1 = two.makeText('mkArrow', 140, 34); t1.size = 13; t1.fill = stroke
 
   // rounded elbow path
+  makePath(two, { stroke: "lightgray", linewidth: 3, head: 'triangle' })
+    .M(40, 110)
+    .v(60)
+    .h(100)
+    .l(-60,-60)
+    .h(50)
+    .l(60,60)
   makePath(two, { stroke, linewidth: 3, radius: 20, head: 'triangle' })
     .M(40, 110)
     .v(60)

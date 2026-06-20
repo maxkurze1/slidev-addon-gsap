@@ -180,7 +180,15 @@ Path commands (uppercase = absolute, lowercase = relative to current point):
 - `HV VH` — one 90° corner (horizontal-then-vertical / vertical-then-horizontal).
 - `HVH VHV` — two corners; optional trailing ratio `0..1` (default `0.5`) sets the
   split, e.g. `.VHV('.b@c', 0.3)`.
-- `radius` on the path rounds all corners; `head` (`'triangle'` etc.) adds an arrowhead.
+- `radius` on the path rounds all corners; `head` adds an arrowhead. It takes a
+  tip name (case-/separator-insensitive), `true` (= `straight`), or `false`.
+  Tips: barbed (`straight`/`line`, `arc`, `bar`, `bracket`/`]`, `left bracket`/`[`,
+  `parenthesis`/`)`, `left parenthesis`/`(`, `hooks`, `tee`), mathematical
+  (`classical`/`to`, `cm`), geometric (`triangle`, `stealth`, `latex`, `kite`,
+  `diamond`, `turned square`, `square`, `rectangle`, `ellipse`, `circle`), caps
+  (`round cap`, `fast round`, `fast triangle`), and `rays` (count configurable:
+  `rays[3]`, default `rays[6]`). Tips inherit the stroke, scale with `linewidth`,
+  and the shaft is truncated so the tip touches the endpoint exactly.
 
 Other notes:
 - `text` / `label` prop on arrows & paths draws a label that rides the shaft

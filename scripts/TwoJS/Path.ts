@@ -390,27 +390,55 @@ export class Path extends Group {
 
   _syncHead() {
     const head = this._headShape;
-    if (!head) return;
-
     const shaft = this._shaft;
-    const visibleLength = Math.max(0, (this._end - this._start) * (shaft as any).length);
+    // No head: the shaft is drawn to its logical end.
+    if (!head) { shaft.ending = this._end; return; }
 
-    if (visibleLength <= 1e-6) {
-      head.visible = false; return;
+    const total = (shaft as any).length || 0;
+    const visibleLength = Math.max(0, (this._end - this._start) * total);
+
+    // How far the tip reaches forward of its (0,0) connection. The shaft is
+    // truncated by this much so the head fits *before* the path's end and the
+    // shaft visually terminates at the connection point.
+    const advance = typeof (head as any).advanceFor === "function"
+      ? (head as any).advanceFor(Math.max((shaft.linewidth as number) || 1, 1))
+      : 0;
+
+    // Not enough drawn shaft to host the head yet (e.g. mid draw-on): keep the
+    // shaft whole and hide the head until there is room.
+    if (visibleLength <= 1e-6 || visibleLength <= advance) {
+      shaft.ending = this._end;
+      head.visible = false;
+      return;
     }
 
-    const t = Math.max(0, Math.min(1, this._end));
+    // Find the fraction where the head attaches: the point that is `advance`
+    // (straight-line distance) back from the path end. We can't derive it
+    // arithmetically because Two's getPointAt eases within each segment rather
+    // than mapping arc length linearly — so binary-search the monotonic curve.
+    // Using getPointAt for both the head position and `ending` keeps the
+    // truncated shaft and the head connected at exactly the same point.
+    const endP = shaft.getPointAt(this._end);
+    if (!endP) { head.visible = false; return; }
+    let lo = this._start, hi = this._end, tHead = this._end;
+    for (let i = 0; i < 28; i++) {
+      const mid = (lo + hi) / 2;
+      const pm = shaft.getPointAt(mid);
+      const dist = pm ? Math.hypot(pm.x - endP.x, pm.y - endP.y) : 0;
+      if (dist > advance) lo = mid; else hi = mid; // too far back → move forward
+      tHead = mid;
+    }
+    shaft.ending = tHead;
+
     const dt = 1e-3;
-    const ta = Math.max(0, Math.min(1, t - dt));
-    const tb = Math.max(0, Math.min(1, t + dt));
-    const p1 = shaft.getPointAt(ta);
-    const p2 = shaft.getPointAt(tb);
-    const p = shaft.getPointAt(t);
-    if (!p1 || !p2 || !p) {
+    const p = shaft.getPointAt(tHead);
+    const pa = shaft.getPointAt(Math.max(0, tHead - dt));
+    const pb = shaft.getPointAt(Math.min(1, tHead + dt));
+    if (!p || !pa || !pb) {
       head.visible = false; return;
     }
 
-    const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+    const angle = Math.atan2(pb.y - pa.y, pb.x - pa.x);
     head.rotation = angle;
     head.position = p;
 
@@ -419,7 +447,10 @@ export class Path extends Group {
     (head as any).cap = shaft.cap;
     (head as any).join = shaft.join;
     (head as any).opacity = shaft.opacity;
-    (head as any).fill = shaft.stroke;
+    // Filled tips (triangle, stealth, …) paint their interior with the stroke
+    // color; stroke-only tips (barbs, brackets, caps) stay unfilled.
+    if ((head as any).__pathHeadFilled) (head as any).fill = shaft.stroke;
+    else (head as any).noFill();
 
     head.visible = true;
   }

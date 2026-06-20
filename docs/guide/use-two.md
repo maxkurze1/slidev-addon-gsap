@@ -62,6 +62,35 @@ Commands:
 - `radius` rounds **all** corners; `head` (e.g. `'triangle'`) adds an arrowhead.
 - `text` / `label` draws a label that rides the shaft.
 
+## Arrow heads
+
+`head` accepts a **tip name** (string), `true` (the default `straight`),
+or `false` / omitted for none. The tip is drawn at the end of the shaft, points
+along the path direction, inherits the shaft's `stroke`, and **scales with
+`linewidth`** — thicker lines get proportionally larger tips.
+
+```ts
+two.back.mkPath({ stroke: '#6366f1', head: 'stealth', linewidth: 3 }).M('.a@r').L('.b@l')
+```
+
+The set is inspired by the [TikZ `arrows.meta` library](https://tikz.dev/tikz-arrows#sec-16.5)
+and grouped the same way. Names are matched case-insensitively and
+space/hyphen/underscore-insensitively, so `'Turned Square'`, `'turned square'`
+and `'turned-square'` are equivalent. Filled tips (the geometric shapes) paint
+their interior with the stroke color; barbs, brackets and the like are
+stroke-only.
+Every geometric tip also has a hollow, stroke-only twin named `open …` (e.g.
+`'open triangle'`, `'open circle'`) — the same outline with no fill.
+
+<ArrowHeadsGallery />
+
+The `rays` tip takes a configurable ray count in trailing brackets — e.g.
+`'rays[3]'` or `'rays[5]'` (default `'rays[6]'`).
+
+You can also pass a custom Two.js `Shape` as `head` — it's placed at the tip and
+rotated to the path direction (author it pointing toward **+x** with its point
+at the origin).
+
 ## Circles — `mkCircle(center, radius, props?)`
 
 ```ts

@@ -155,7 +155,8 @@ two.back.mkPath(props?)        // config-first
 ```
 
 Uppercase = absolute, lowercase = relative. Props: `stroke`, `linewidth`,
-`radius` (rounds corners), `head` (e.g. `'triangle'`), `text` / `label`,
+`radius` (rounds corners), `head` (a TikZ-style arrow-tip name — see the
+[gallery of tips](/guide/use-two#arrow-heads)), `text` / `label`,
 `start`/`end`.
 
 ### mkCircle
