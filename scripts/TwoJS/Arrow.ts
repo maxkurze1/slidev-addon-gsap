@@ -1,6 +1,6 @@
 import Two from "two.js";
 import { Vector } from "two.js/src/vector";
-import { AnchorLike, resolveVec, TwoLike, requireTwoInstance, expandPositions } from "./util";
+import { AnchorLike, resolveVec, TwoLike, requireTwoInstance, expandPositions, applyDashPattern } from "./util";
 import { PathLabel, normalizeLabel, type LabelInput } from "./label";
 
 const { Group, Anchor, Path, Commands } = Two;
@@ -21,6 +21,9 @@ export class Arrow extends Group {
   _from: AnchorLike;
   _to: AnchorLike;
   _label: PathLabel | null = null;
+  _dashes: number[] | null = null;
+  _dashed = false;
+  _dashOffset = 0;
 
   constructor(from: AnchorLike, to: AnchorLike) {
     super();
@@ -53,7 +56,7 @@ export class Arrow extends Group {
     this._update();
   }
 
-  static Properties = ["headlen", "text"];
+  static Properties = ["headlen", "text", "dashed", "dashes", "dashOffset"];
 
   // Text label riding along the shaft. Accepts a string or LabelOptions.
   get text() { return this._label?.text ?? null; }
@@ -77,6 +80,22 @@ export class Arrow extends Group {
   set headlen(v: number) {
     this._headlen = v;
   }
+
+  // Dashed shaft (the arrowhead stays solid). `dashed = true` derives a
+  // linewidth-scaled pattern; pass an explicit `dashes` array of [on, off, …]
+  // px lengths for full control. `dashOffset` shifts the pattern (animate it
+  // for marching ants).
+  get dashed() { return this._dashed || !!this._dashes; }
+  set dashed(v: boolean) {
+    this._dashed = !!v;
+    if (!v) this._dashes = null;
+  }
+  get dashes() { return this._dashes; }
+  set dashes(v: number[] | null) {
+    this._dashes = v && v.length ? v.slice() : null;
+  }
+  get dashOffset() { return this._dashOffset; }
+  set dashOffset(v: number) { this._dashOffset = v; }
 
   get head() { return this._head; }
   get shaft() { return this._shaft; }
@@ -144,6 +163,8 @@ export class Arrow extends Group {
     v2.y = p.y - headlen * Math.sin(this._angle - Math.PI * this._tip_angle);
     v4.x = p.x - headlen * Math.cos(this._angle + Math.PI * this._tip_angle);
     v4.y = p.y - headlen * Math.sin(this._angle + Math.PI * this._tip_angle);
+
+    applyDashPattern(shaft, this._dashes, this._dashed, this._dashOffset);
 
     this._label?.update(shaft, this._start, this._end, shaft.stroke as string);
 

@@ -35,6 +35,7 @@ Endpoints are resolved every frame. A selector matching multiple elements
 two.back.mkArrow('.a@r', '.b@l', {
   stroke: '#0ea5e9', linewidth: 3,
   headlen: 14,            // arrowhead size
+  dashed: true,           // dashed shaft (see "Dashed strokes" below)
   text: 'flows to',       // label riding the shaft (string or options object)
 })
 ```
@@ -90,6 +91,27 @@ The `rays` tip takes a configurable ray count in trailing brackets — e.g.
 You can also pass a custom Two.js `Shape` as `head` — it's placed at the tip and
 rotated to the path direction (author it pointing toward **+x** with its point
 at the origin).
+
+## Dashed strokes
+
+Both arrows and paths accept dash props. The arrowhead/path-head always stays
+solid — only the shaft is dashed.
+
+```ts
+two.back.mkArrow('.a@r', '.b@l', { dashed: true })                 // linewidth-scaled dashes
+two.back.mkPath({ stroke: '#6366f1', dashes: [12, 6] }).M('.a@r').L('.b@l')  // explicit [on, off] px
+```
+
+- `dashed: true` — derive a pattern that scales with `linewidth` (thicker lines
+  get larger dashes). `false` / omitted draws solid.
+- `dashes: [on, off, …]` — explicit dash/gap lengths in px (overrides `dashed`).
+- `dashOffset` — shift the pattern along the path. Animate it with
+  [`useTl`](./use-tl) for a marching-ants effect:
+
+```ts
+const p = two.back.mkPath({ dashes: [10, 8] }).M('.a@r').L('.b@l')
+tl.step().to(p, { dashOffset: -18, duration: 1, repeat: -1, ease: 'none' })
+```
 
 ## Circles — `mkCircle(center, radius, props?)`
 

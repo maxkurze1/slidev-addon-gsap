@@ -6,7 +6,7 @@ import type { Anchor as AnchorT } from "two.js/src/anchor";
 
 const { Group, Anchor, Commands } = Two
 
-import { resolveVec, TwoLike, requireTwoInstance } from "./util";
+import { resolveVec, TwoLike, requireTwoInstance, applyDashPattern } from "./util";
 import {
   resolvePathHead,
 } from "./heads";
@@ -39,6 +39,9 @@ export class Path extends Group {
   _headShape: Shape | null = null;
   _label: PathLabel | null = null;
   _ops: Array<{ cmd: string; args: any[]; ratio?: number }> = [];
+  _dashes: number[] | null = null;
+  _dashed = false;
+  _dashOffset = 0;
 
   constructor() {
     super();
@@ -58,7 +61,7 @@ export class Path extends Group {
     this._update();
   }
 
-  static Properties = ['radius', 'head', 'text'];
+  static Properties = ['radius', 'head', 'text', 'dashed', 'dashes', 'dashOffset'];
 
   get shaft() { return this._shaft; }
 
@@ -84,6 +87,21 @@ export class Path extends Group {
   set start(v : number) { this._shaft.beginning = v; this._start = v; }
   get radius() { return this._radius; }
   set radius(v: number) { this._radius = Math.max(0, v); }
+
+  // Dashed stroke. `dashed = true` derives a linewidth-scaled pattern; pass an
+  // explicit `dashes` array of [on, off, …] px lengths for full control.
+  // `dashOffset` shifts the pattern (animate it for marching ants).
+  get dashed() { return this._dashed || !!this._dashes; }
+  set dashed(v: boolean) {
+    this._dashed = !!v;
+    if (!v) this._dashes = null;
+  }
+  get dashes() { return this._dashes; }
+  set dashes(v: number[] | null) {
+    this._dashes = v && v.length ? v.slice() : null;
+  }
+  get dashOffset() { return this._dashOffset; }
+  set dashOffset(v: number) { this._dashOffset = v; }
   get head() { return this._headShape; }
   set head(v: string | Shape | boolean | null | undefined) {
     if (this._headShape) {
@@ -540,6 +558,7 @@ export class Path extends Group {
   _update() {
     this._syncGeometry();
     this._syncHead();
+    applyDashPattern(this._shaft, this._dashes, this._dashed, this._dashOffset);
     this._label?.update(this._shaft, this._start, this._end, this._shaft.stroke as string);
 
     super._update();

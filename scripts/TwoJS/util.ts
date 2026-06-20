@@ -101,6 +101,34 @@ export function expandPositions(
   return { items: [value], isArray: false };
 }
 
+/**
+ * Apply a dash pattern to a stroked shaft.
+ *
+ * - an explicit `dashes` array (px on/off lengths) wins;
+ * - `dashed === true` derives a pattern that scales with the current linewidth
+ *   (so thicker lines get proportionally larger dashes);
+ * - otherwise the shaft is drawn solid (empty pattern).
+ *
+ * `offset` shifts the pattern along the path — animate it (e.g. with GSAP) for a
+ * marching-ants effect. It is reapplied every frame, so it stays live.
+ */
+export function applyDashPattern(
+  shaft: { linewidth?: number; dashes?: any } | null | undefined,
+  dashes: number[] | null,
+  dashed: boolean,
+  offset = 0,
+): void {
+  if (!shaft) return;
+  let arr: number[] = [];
+  if (dashes && dashes.length) arr = dashes.slice();
+  else if (dashed) {
+    const lw = Math.max((shaft.linewidth as number) || 1, 1);
+    arr = [lw * 2.5, lw * 2.5];
+  }
+  (arr as any).offset = offset;
+  shaft.dashes = arr;
+}
+
 export function resolveTwoInstance(two: TwoLike): Two | null {
   const anyTwo = two as any;
   if (anyTwo?.scene?.add) return anyTwo as Two;

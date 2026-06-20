@@ -193,6 +193,10 @@ Path commands (uppercase = absolute, lowercase = relative to current point):
 Other notes:
 - `text` / `label` prop on arrows & paths draws a label that rides the shaft
   (string, or `{ text, at, offset, rotate, background, fill, size }`).
+- **Dashed strokes** on arrows & paths (the head stays solid): `dashed: true`
+  gives a linewidth-scaled pattern; `dashes: [on, off, …]` sets explicit px
+  lengths; `dashOffset` shifts the pattern — animate it (`tl.to(p, { dashOffset:
+  -18, repeat: -1, ease: 'none' })`) for marching ants.
 - **Draw-on animation:** shapes expose `start`/`end` (0..1). Animate with
   `tl.from(shape, { end: 0, duration: 0.6 })` to draw them on at a step.
 - Coordinates use Slidev's configured slide size, so they line up with `usePos`.

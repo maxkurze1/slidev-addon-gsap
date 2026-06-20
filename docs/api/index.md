@@ -141,8 +141,9 @@ two.back.mkArrow(from, to, props?) → Arrow | Arrow[] | null
 ```
 
 `from`/`to` are anchor strings (`'.a@r'`), elements, points, or arrays
-(fan-out). Props: `stroke`, `linewidth`, `headlen`, `text` / `label`, plus
-`start`/`end` (0 - 1).
+(fan-out). Props: `stroke`, `linewidth`, `headlen`, `text` / `label`,
+`dashed` / `dashes` / `dashOffset` (see [Dashed strokes](/guide/use-two#dashed-strokes)),
+plus `start`/`end` (0 - 1).
 
 ### mkPath
 
@@ -157,6 +158,7 @@ two.back.mkPath(props?)        // config-first
 Uppercase = absolute, lowercase = relative. Props: `stroke`, `linewidth`,
 `radius` (rounds corners), `head` (a TikZ-style arrow-tip name — see the
 [gallery of tips](/guide/use-two#arrow-heads)), `text` / `label`,
+`dashed` / `dashes` / `dashOffset` (see [Dashed strokes](/guide/use-two#dashed-strokes)),
 `start`/`end`.
 
 ### mkCircle
