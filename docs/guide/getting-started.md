@@ -1,10 +1,33 @@
 # Getting Started
 
+This guide assumes that you already have a Slidev presentation setup. If that is not
+the case, you should first go through the [offical guide](https://sli.dev/guide/) and
+then come back.
+
 ## Install
 
-```bash
-pnpm install git+https://github.com/maxkurze1/slidev-addon-gsap.git
+First, go into an existing Slidev repository and install this addon with the following
+command:
+
+::: code-group
+
+```bash [pnpm]
+pnpm add git+https://github.com/maxkurze1/slidev-addon-gsap.git
 ```
+
+```bash [npm]
+npm install git+https://github.com/maxkurze1/slidev-addon-gsap.git
+```
+
+```bash [yarn]
+yarn add git+https://github.com/maxkurze1/slidev-addon-gsap.git
+```
+
+```bash [bun]
+bun add git+https://github.com/maxkurze1/slidev-addon-gsap.git
+```
+
+:::
 
 ## Enable the addon
 

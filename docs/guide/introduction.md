@@ -2,20 +2,20 @@
 
 `slidev-addon-gsap` brings [GSAP](https://gsap.com/) timelines and
 [Two.js](https://two.js.org/) drawing into [Slidev](https://sli.dev/) decks,
-with an ergonomic, **click-driven** authoring model.
+with an ergonomic, **timeline-based** authoring model.
 
 Instead of hand-wiring `v-click` directives and CSS transitions, you build a
 paused GSAP timeline and split it into steps — each click plays to the next.
 You get the full power of GSAP, plus helpers for the things slides actually need:
 
 - **`useTl`** — a click-driven GSAP timeline. The click count is *inferred* from
-  the number of steps; reverse and refresh "just work".
+  the number of steps; reverse and refresh work out of the box.
 - **`usePos`** — live `selector@anchor` points on DOM elements, re-measured every
-  frame so arrows and labels track layout, moves and resizes.
-- **`useTwo`** — Two.js layers above and below the slide for arrows, paths,
-  circles, etc. whose endpoints stay bound to elements.
-- **Preset effects** — `popIn`, `slideIn`, `pulse`, … one-liners with good defaults.
-- **Morph / magic-move** — within a slide (`tl.morph`) and automatically across
+  frame (60/s) so arrows and labels track layout, moves and resizes.
+- **`useTwo`** — two layers one above and one below the slide for drawing arrows, paths,
+  circles, etc. whose endpoints stay bound to elements (using Two.js).
+- **Preset effects** — `popIn`, `slideIn`, `pulse`, … one-liners with reasonable defaults.
+- **Morph / magic-move** — within a slide (`tl.morph`) and across
   slides (`data-morph`).
 
 
@@ -52,10 +52,10 @@ click-driven animations for Slidev
 
 ## Why?
 
-Slidev's built-in clicks are great for reveals, but coordinating multiple
-elements, drawing connectors between them, or doing Keynote-style magic-move gets
-verbose fast. This addon keeps all of that in one place — a single timeline per
-slide — while staying "just GSAP" underneath, so anything GSAP can do, you can do.
+Slidev's built-in clicks are fine for simple reveals, but coordinating multiple
+elements/animations by spreading explicit indices over the whole slide, becomes
+unmaintainable quite fast. This addon keeps all animations in one place — a single
+timeline per slide — while exposing the full animation capabilities of GSAP.
 
 Continue to [Getting Started](./getting-started) to install it, or jump to the
 [Features Overview](./features).
