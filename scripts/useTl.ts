@@ -19,17 +19,6 @@ gsap.registerPlugin(Flip);
 gsap.registerPlugin(GSDevTools);
 
 type MorphTarget = string | Element | Element[] | null | undefined;
-type MorphOptions = {
-  /** Duration of the morph in seconds. Default 0.8. */
-  duration?: number;
-  ease?: string;
-  /**
-   * Match size with cheap transforms (scaleX/scaleY) — fast but stretches the
-   * contents when A and B differ in aspect ratio. Set false to animate
-   * width/height instead (no distortion, but reflows children). Default true.
-   */
-  scale?: boolean;
-};
 
 // A recorded morph, so its Flip geometry can be (re)built on slide-enter when
 // the elements are actually laid out (at mount they may be display:none).
@@ -37,9 +26,11 @@ type MorphSpec = {
   elA: Element;
   elB: Element;
   at: number;
-  duration: number;
-  ease: string;
-  scale: boolean;
+  opts: {
+    duration: number;
+    ease: string;
+    scale: boolean;
+  } & Record<string, any>
   anims: gsap.core.Animation[];
 };
 
@@ -52,7 +43,7 @@ type StepTimeline = gsap.core.Timeline & TimelineEffects & {
    * Selectors are resolved within this slide. Defaults to a cross-fade so A
    * visually turns into B.
    */
-  morph(a: MorphTarget, b: MorphTarget, opts?: MorphOptions): StepTimeline
+  morph(a: MorphTarget, b: MorphTarget, opts?: {}): StepTimeline
 }
 
 type TimelineMethodName = "from" | "to" | "fromTo";
@@ -92,40 +83,31 @@ export function useTl() {
   const id = makeId()
 
   // Click index the URL asks for on load, captured during setup — before the
-  // clicks context clamps it to the (still-zero) total on mount.
-  const initialClicks = Math.max(0, Math.floor(+(queryClicksRaw?.value ?? 0)) || 0)
-
+  // clicks context clamps it on mount.
   let tl = shallowRef<StepTimeline | null>(null)
   let dev: GSDevTools | null = null;
   let tween: gsap.core.Tween | null = null
   let step_idx = 0
   /* the label that is being animated to / paused at */
-  let current = 0
   /* morphs to (re)build once the slide is visible — see refreshMorphs() */
   const morphSpecs: MorphSpec[] = []
 
   function attachStepFn(tl: gsap.core.Timeline) : StepTimeline {
     patchGsapTargetMethods(tl, () => slide.value)
     tl.step = function () {
-      this.addLabel("step-" + String(step_idx++))
-      // Infer the slide's click count from the number of step() calls so the
-      // `clicks:` frontmatter is no longer needed. Labels run step-0..step-(n-1);
-      // reaching the last one takes n-1 clicks, so the registered max is
-      // step_idx - 1.
-      //
+      this.addLabel("step-" + String(step_idx))
       // We write maxMap directly instead of calling clicks.register(): steps are
       // typically added in the user's onMounted (after the clicks context has
       // already mounted), and register() warns about post-mount registration.
       // The maxMap getter returns the live (reactive, once mounted) map, so this
       // keeps Slidev's `total` in sync. An explicit `clicks:` frontmatter still
       // wins, because `total` uses it as an override ahead of maxMap.
-      clicks?.maxMap?.set(id, Math.max(0, step_idx - 1))
+      clicks?.maxMap?.set(id, step_idx++)
       return this
     }
     tl.click = tl.step;
 
-    // Resolve a morph target to a single element, scoped to this slide so a
-    // bare `.a` doesn't collide with a `.a` on another slide.
+    // Resolve a morph target to a single element
     const firstEl = (t: MorphTarget): Element | null => {
       const root = slide.value;
       if (t == null) return null;
@@ -134,7 +116,7 @@ export function useTl() {
       return t as Element;
     };
 
-    tl.morph = function (this: StepTimeline, a: MorphTarget, b: MorphTarget, opts: MorphOptions = {}) {
+    tl.morph = function (this: StepTimeline, a: MorphTarget, b: MorphTarget, opts: {}) {
       const elA = firstEl(a);
       const elB = firstEl(b);
       if (!elA || !elB) {
@@ -142,10 +124,7 @@ export function useTl() {
         return this;
       }
 
-      const duration = opts.duration ?? 0.8;
-      const ease = opts.ease ?? "power1.inOut";
-      const scale = opts.scale ?? true;
-
+      const optsd = { duration: 0.8, ease: "power1.inOut", scale: true, ...opts }
       // Append at the current end so the morph occupies this click's interval.
       const at = this.duration();
 
@@ -155,10 +134,10 @@ export function useTl() {
       // in refreshMorphs() on slide-enter — measuring here would read a
       // display:none box when the slide is preloaded behind another one.
       // hold the slot
-      this.to(elA, { autoAlpha: 0, duration, ease }, at);
-      this.from(elB, { autoAlpha: 0, duration, ease }, at);
+      this.to(elA, { autoAlpha: 0, duration: optsd.duration, ease: optsd.ease }, at);
+      this.from(elB, { autoAlpha: 0, duration: optsd.duration, ease: optsd.ease }, at);
 
-      morphSpecs.push({ elA, elB, at, duration, ease, scale, anims: [] });
+      morphSpecs.push({ elA, elB, at, opts: optsd, anims: [] });
       return this;
     } as StepTimeline["morph"];
 
@@ -172,9 +151,7 @@ export function useTl() {
 
   // tween to label with adjusted speedup
   // i.e. nervously clicking multiple times accelerates scrubbing
-  function playToLabelNum(new_c: number, delay = 0){
-    let old_c = current;
-    current = new_c;
+  function playToLabelNum(new_c: number, backwards: boolean, delay = 0){
     tween?.kill()
     if (!tl.value) return
 
@@ -191,7 +168,7 @@ export function useTl() {
     /* difference between the current step-index and the user desired index */
     const diff = Object.entries(tl.value.labels)
       .filter(([name, time]) => /^step-\d+$/.test(name) && time > min && time < max).length
-      + (new_c < old_c ? 1 : 0) /* additional speedup for going backwards */;
+      + (backwards ? 1 : 0) /* additional speedup for going backwards */;
     if (!dev) tl.value.timeScale(Math.pow(1.8, diff))
 
     tween = tl.value.tweenTo("step-" + String(new_c), {
@@ -232,7 +209,7 @@ export function useTl() {
       // forces every earlier tween to re-render onto the freshly-cleared DOM.
 
       /* TODO clear this stuff once i am certain morphs should only ever be computed once
-      also remove the "anims" field in that case */
+         also remove the "anims" field in that case */
       //gsap.set([s.elA, s.elB], { clearProps: "transform,transformOrigin,width,height" });
       //t.seek(0, true);
       t.seek(s.at, true);
@@ -241,45 +218,44 @@ export function useTl() {
 
       // Create all Flip animations against the seeked state. They aren't added
       // to the timeline yet, so nothing has moved off that state during measuring.
-      const fitA = Flip.fit(s.elA, s.elB, { duration: s.duration, ease: s.ease, scale: s.scale });
+      const fitA = Flip.fit(s.elA, s.elB, s.opts);
       // B travels the same box→box path as A: snap it onto A's current box,
       // then animate back to its own, so the two stay overlapped and cross-fade.
       const natural = Flip.getState(s.elB);
-      Flip.fit(s.elB, s.elA, { scale: s.scale });
-      const fitB = Flip.to(natural, { duration: s.duration, ease: s.ease, scale: s.scale });
+      Flip.fit(s.elB, s.elA, { scale: s.opts.scale });
+      const fitB = Flip.to(natural, s.opts);
 
       if (fitA) { t.add(fitA as gsap.core.Tween, s.at); s.anims.push(fitA as gsap.core.Tween); }
       if (fitB) { t.add(fitB, s.at); s.anims.push(fitB); }
     }
   }
 
-  watch($clicks, newCnt => {
+  watch($clicks, (new_c, old_c) => {
     /* if we are already on another slide
      * dont animate anymore - else it
      * looks a bit laggy during slide
      * transition  */
     if (!active.value) return;
-    console.debug("clicks")
-    playToLabelNum(newCnt)
+    playToLabelNum(new_c, new_c < old_c)
   })
 
   onBeforeMount(() => {
     // Reserve the URL's click count before the clicks context clamps it on
-    // mount. Otherwise a page refresh resets the position to 0, because the
+    // mount. Otherwise a page refresh resets the position, because the
     // real total isn't known until the timeline is built onMounted (step()
     // then replaces this provisional value with the actual step count).
-    if (active.value && initialClicks > 0)
-      clicks?.maxMap?.set(id, initialClicks)
+    const urlclicks = Math.max(0, Math.floor(+(queryClicksRaw?.value ?? 0)) || 0)
+
+    if (active.value && urlclicks > 0)
+      clicks?.maxMap?.set(id, urlclicks)
   })
 
   onMounted(async () => {
-    // console.log("mounted", isPrintMode.value, active.value)
     tl.value = attachStepFn(gsap.timeline({ paused: true, id: `slide-${$page.value}` }))
     step_idx = 0
   })
 
   onSlideEnter(async (to_n, from_n) => {
-    console.debug("enter", $page.value)
     // TODO only call once
     // if ($frontmatter.gsap_debug)
     //   dev = GSDevTools.create({animation: tl.value as any, persist: false, keyboard: false, hideGlobalTimeline: true, id: `slide-${$page.value}`});
@@ -293,19 +269,17 @@ export function useTl() {
     await nextTick()
     refreshMorphs()
 
+    // instantly jump to the correct index
     let c = untrack($clicks)
     if (c == 0) {
-      tl.value?.seek(0)
-      playToLabelNum(0)
+      tl.value?.seek(0) // reset to 0s
+      playToLabelNum(0, false) // animate to "step-0"
     } else {
-      tl.value?.seek("step-" + String(c))
+      tl.value?.seek("step-" + String(c)) // reset to "step-{c}"
     }
   })
 
   onSlideLeave(() => {
-    console.debug("leave", $page.value)
-    // console.log("leave", `slide-${$page.value}`)
-
     GSDevTools.getById(`slide-${$page.value}`)?.kill()
     dev?.kill()
     tween?.kill()
