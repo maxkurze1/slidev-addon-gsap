@@ -279,12 +279,23 @@ export function attachEffects<T extends gsap.core.Timeline>(
     return buildGlitch(this, target, vars, position, "out", resolveTargets);
   };
 
-  // Split the target into chars/words/lines (scoped to the slide) and return the
-  // pieces. They're real elements, so the patched from/to leaves them untouched.
-  const splitPieces = (target: any, by: SplitBy): Element[] => {
-    const split = new SplitText(resolveTargets(target), { type: by });
-    return ((split as any)[by] as Element[]) ?? [];
-  };
+  // Build a split-based text effect (textSplit/textGather/textFlip/textUnderline).
+  // Split the target into chars/words/lines once and stagger the resulting pieces
+  // with `addTween`; `prep` (optional) sets per-piece styles first (e.g. the
+  // underline gradient). The split runs synchronously here so the tween lands at
+  // the right spot in the timeline, before any later step(). The pieces are real
+  // elements, so the patched from/to leaves them untouched.
+  type AddTween = (this: AnyTl, pieces: Element[], vars: EffectVars, position: Pos | undefined) => void;
+  const splitEffect = (defaultBy: SplitBy, addTween: AddTween, prep?: (pieces: Element[]) => void) =>
+    function (this: AnyTl, target: any, vars: EffectVars = {}, position?: Pos) {
+      const by = vars.by ?? defaultBy;
+      const split = SplitText.create(resolveTargets(target), { type: by, smartWrap: true });
+      const pieces = ((split as any)[by] as Element[]) ?? [];
+      if (!pieces.length) return this;
+      prep?.(pieces);
+      addTween.call(this, pieces, vars, position);
+      return this;
+    };
 
   // ——— text entrances/exits (paired). Each builds a `from` (in) or `to` (out)
   // tween; the "out" mirrors the "in" so they read as reverses of each other.
@@ -295,76 +306,53 @@ export function attachEffects<T extends gsap.core.Timeline>(
   t.textTypeOut = TO({ text: "", duration: 0.6, ease: "none" });
 
   // Split reveal: stagger each chars/words/lines piece in/out.
-  const splitReveal = (mode: "in" | "out") =>
-    function (this: AnyTl, target: any, vars: EffectVars = {}, position?: Pos) {
-      const pieces = splitPieces(target, vars.by ?? "chars");
-      if (!pieces.length) return this;
-      if (mode === "in")
-        this.from(pieces, { autoAlpha: 0, y: 12, duration: 0.5, ease: "power2.out", stagger: 0.03, ...plain(vars) }, position);
-      else
-        this.to(pieces, { autoAlpha: 0, y: -12, duration: 0.45, ease: "power2.in", stagger: 0.02, ...plain(vars) }, position);
-      return this;
-    };
-  t.textSplitIn = splitReveal("in");
-  t.textSplitOut = splitReveal("out");
+  t.textSplitIn = splitEffect("chars", function (pieces, vars, position) {
+    this.from(pieces, { autoAlpha: 0, y: 12, duration: 0.5, ease: "power2.out", stagger: 0.03, ...plain(vars) }, position);
+  });
+  t.textSplitOut = splitEffect("chars", function (pieces, vars, position) {
+    this.to(pieces, { autoAlpha: 0, y: -12, duration: 0.45, ease: "power2.in", stagger: 0.02, ...plain(vars) }, position);
+  });
 
   // ——— showcase text effects (inspired by gsapify.com/gsap-text-animations) ———
 
   // Per-char: converge from / scatter to random offsets. GSAP resolves each
   // "random(...)" string to a different value per char.
   const scatter = { x: "random(-200, 200)", y: "random(-200, 200)", rotation: "random(-90, 90)" };
-  const gather = (mode: "in" | "out") =>
-    function (this: AnyTl, target: any, vars: EffectVars = {}, position?: Pos) {
-      const pieces = splitPieces(target, vars.by ?? "chars");
-      if (!pieces.length) return this;
-      if (mode === "in")
-        this.from(pieces, { autoAlpha: 0, ...scatter, duration: 1, ease: "power3.out", stagger: 0.02, ...plain(vars) }, position);
-      else
-        this.to(pieces, { autoAlpha: 0, ...scatter, duration: 0.8, ease: "power3.in", stagger: 0.02, ...plain(vars) }, position);
-      return this;
-    };
-  t.textGatherIn = gather("in");
-  t.textGatherOut = gather("out");
+  t.textGatherIn = splitEffect("chars", function (pieces, vars, position) {
+    this.from(pieces, { autoAlpha: 0, ...scatter, duration: 1, ease: "power3.out", stagger: 0.02, ...plain(vars) }, position);
+  });
+  t.textGatherOut = splitEffect("chars", function (pieces, vars, position) {
+    this.to(pieces, { autoAlpha: 0, ...scatter, duration: 0.8, ease: "power3.in", stagger: 0.02, ...plain(vars) }, position);
+  });
 
   // Per-char: flip in/out around the top/bottom edge (3D rotateX).
-  const flip = (mode: "in" | "out") =>
-    function (this: AnyTl, target: any, vars: EffectVars = {}, position?: Pos) {
-      const pieces = splitPieces(target, vars.by ?? "chars");
-      if (!pieces.length) return this;
-      const base = { transformPerspective: 400, stagger: { each: 0.06, from: "start" as const } };
-      if (mode === "in")
-        this.from(pieces, { autoAlpha: 0, rotationX: -90, transformOrigin: "50% 0%", duration: 0.4, ease: "power2.out", ...base, ...plain(vars) }, position);
-      else
-        this.to(pieces, { autoAlpha: 0, rotationX: 90, transformOrigin: "50% 100%", duration: 0.35, ease: "power2.in", ...base, ...plain(vars) }, position);
-      return this;
-    };
-  t.textFlipIn = flip("in");
-  t.textFlipOut = flip("out");
+  const flipBase = { transformPerspective: 400, stagger: { each: 0.06, from: "start" as const } };
+  t.textFlipIn = splitEffect("chars", function (pieces, vars, position) {
+    this.from(pieces, { autoAlpha: 0, rotationX: -90, transformOrigin: "50% 0%", duration: 0.4, ease: "power2.out", ...flipBase, ...plain(vars) }, position);
+  });
+  t.textFlipOut = splitEffect("chars", function (pieces, vars, position) {
+    this.to(pieces, { autoAlpha: 0, rotationX: 90, transformOrigin: "50% 100%", duration: 0.35, ease: "power2.in", ...flipBase, ...plain(vars) }, position);
+  });
 
   // Per-word: a bottom underline (a CSS gradient set on each word) grows from /
   // shrinks to zero width, word by word. Only its width animates; anchoring the
   // gradient left (in) vs right (out) makes both run L→R — the underline draws on
   // left→right, then later empties from the left edge rightward.
-  const underline = (mode: "in" | "out") =>
-    function (this: AnyTl, target: any, vars: EffectVars = {}, position?: Pos) {
-      const pieces = splitPieces(target, vars.by ?? "words");
-      if (!pieces.length) return this;
-      for (const el of pieces) {
-        const s = (el as HTMLElement).style;
-        s.backgroundImage = "linear-gradient(currentColor, currentColor)";
-        s.backgroundRepeat = "no-repeat";
-        s.backgroundPosition = mode === "in" ? "0 100%" : "100% 100%";
-        s.backgroundSize = "100% 2px";
-        s.paddingBottom = "0.08em";
-      }
-      if (mode === "in")
-        this.from(pieces, { backgroundSize: "0% 2px", duration: 0.25, ease: "none", stagger: 0.05, ...plain(vars) }, position);
-      else
-        this.to(pieces, { backgroundSize: "0% 2px", duration: 0.2, ease: "none", stagger: 0.05, ...plain(vars) }, position);
-      return this;
-    };
-  t.textUnderlineIn = underline("in");
-  t.textUnderlineOut = underline("out");
+  const underlinePrep = (mode: "in" | "out") => (pieces: Element[]) => {
+    for (const el of pieces) {
+      const s = (el as HTMLElement).style;
+      s.backgroundImage = "linear-gradient(currentColor, currentColor)";
+      s.backgroundRepeat = "no-repeat";
+      s.backgroundPosition = mode === "in" ? "0 100%" : "100% 100%";
+      s.backgroundSize = "100% 2px";
+    }
+  };
+  t.textUnderlineIn = splitEffect("words", function (pieces, vars, position) {
+    this.from(pieces, { backgroundSize: "0% 2px", duration: 0.25, ease: "none", stagger: 0.05, ...plain(vars) }, position);
+  }, underlinePrep("in"));
+  t.textUnderlineOut = splitEffect("words", function (pieces, vars, position) {
+    this.to(pieces, { backgroundSize: "0% 2px", duration: 0.2, ease: "none", stagger: 0.05, ...plain(vars) }, position);
+  }, underlinePrep("out"));
 
   // ——— text emphasis (in place) ———
 
