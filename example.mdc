@@ -580,7 +580,7 @@ const tl = useTl()
 onMounted(() => {
   let x = { val: 30 }
   const path = two.back.mkPath({
-      linewidth: 3, stroke: "#6366f1", head: "triangle", radius: 14,
+      linewidth: 3, stroke: "#6366f1", tail: "square", head: "triangle", radius: 14,
       text: { text: "route", background: "white", },
     })
     .M(".p-from@r")
@@ -605,6 +605,7 @@ SVG-like commands. Upper-case = absolute, lower-case = relative.
 ```ts
 two.back.mkPath({
     stroke: "#6366f1",
+    tail: "square",
     head: "triangle",
     radius: 14,
     text: "route",   // label at the midpoint

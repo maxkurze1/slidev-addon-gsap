@@ -44,6 +44,7 @@ export class Path extends Group {
   _start = 0;
   _radius = 0;
   _headShape: Shape | null = null;
+  _tailShape: Shape | null = null;
   _label: PathLabel | null = null;
   _ops: Array<{ cmd: string; args: any[]; ratio?: number }> = [];
   _dashes: number[] | null = null;
@@ -68,7 +69,7 @@ export class Path extends Group {
     this._update();
   }
 
-  static Properties = ['radius', 'head', 'text', 'dashed', 'dashes', 'dashOffset'];
+  static Properties = ['radius', 'head', 'tail', 'text', 'dashed', 'dashes', 'dashOffset'];
 
   get shaft() { return this._shaft; }
 
@@ -120,6 +121,24 @@ export class Path extends Group {
     if (!resolved) return;
 
     this._headShape = resolved;
+    this.add(resolved);
+  }
+
+  // The tail is a tip seated at the path's *start*, pointing back down the shaft
+  // (away from the head). It accepts exactly the same values as `head` — a tip
+  // name, `true` for the default barb, a Shape, or null/false for none — and is
+  // drawn the same way: `mkPath({ head: 'stealth', tail: 'stealth' })`.
+  get tail() { return this._tailShape; }
+  set tail(v: string | Shape | boolean | null | undefined) {
+    if (this._tailShape) {
+      this.remove(this._tailShape);
+      this._tailShape = null;
+    }
+
+    const resolved = resolvePathHead(v);
+    if (!resolved) return;
+
+    this._tailShape = resolved;
     this.add(resolved);
   }
 
@@ -480,6 +499,74 @@ export class Path extends Group {
     head.visible = true;
   }
 
+  // The mirror of _syncHead: seat the tail tip at the path's *start*, pointing
+  // back down the shaft, and pull the shaft's `beginning` forward so the tip
+  // fits before it instead of overshooting the start.
+  _syncTail() {
+    const tail = this._tailShape;
+    const shaft = this._shaft;
+    // No tail: the shaft is drawn from its logical start.
+    if (!tail) { shaft.beginning = this._start; return; }
+
+    const total = (shaft as any).length || 0;
+    const visibleLength = Math.max(0, (this._end - this._start) * total);
+
+    // How far the tip reaches forward of its (0,0) connection — the shaft is
+    // trimmed by this much from the start so the tail terminates at the start.
+    const advance = typeof (tail as any).advanceFor === "function"
+      ? (tail as any).advanceFor(Math.max((shaft.linewidth as number) || 1, 1))
+      : 0;
+
+    // Not enough drawn shaft to host the tail yet: keep the shaft whole and hide
+    // the tail until there is room.
+    if (visibleLength <= 1e-6 || visibleLength <= advance) {
+      shaft.beginning = this._start;
+      tail.visible = false;
+      return;
+    }
+
+    // Find the fraction where the tail attaches: the point that is `advance`
+    // (straight-line distance) *forward* of the path start. Binary-searched on
+    // the monotonic curve for the same reason _syncHead does it.
+    const startP = shaft.getPointAt(this._start);
+    if (!startP) { tail.visible = false; return; }
+    let lo = this._start, hi = this._end, tTail = this._start;
+    for (let i = 0; i < 28; i++) {
+      const mid = (lo + hi) / 2;
+      const pm = shaft.getPointAt(mid);
+      const dist = pm ? Math.hypot(pm.x - startP.x, pm.y - startP.y) : 0;
+      if (dist > advance) hi = mid; else lo = mid; // too far forward → move back
+      tTail = mid;
+    }
+    shaft.beginning = tTail;
+
+    const dt = 1e-3;
+    const p = shaft.getPointAt(tTail);
+    const pa = shaft.getPointAt(Math.max(0, tTail - dt));
+    const pb = shaft.getPointAt(Math.min(1, tTail + dt));
+    if (!p || !pa || !pb) {
+      tail.visible = false; return;
+    }
+
+    // The shaft tangent points forward; the tail faces the opposite way, so it
+    // is rotated by an extra half-turn.
+    const angle = Math.atan2(pb.y - pa.y, pb.x - pa.x);
+    tail.rotation = angle + Math.PI;
+    tail.position = p;
+
+    (tail as any).stroke = shaft.stroke;
+    (tail as any).linewidth = shaft.linewidth;
+    (tail as any).cap = shaft.cap;
+    (tail as any).join = shaft.join;
+    (tail as any).opacity = shaft.opacity;
+    // Filled tips paint their interior with the stroke color; stroke-only tips
+    // (barbs, brackets, caps) stay unfilled.
+    if ((tail as any).__pathHeadFilled) (tail as any).fill = shaft.stroke;
+    else (tail as any).noFill();
+
+    tail.visible = true;
+  }
+
   // All these commands mirror the svg path commands
   // lower-case letters are relative and upper-case letters absolute
   M(...args) {
@@ -566,6 +653,7 @@ export class Path extends Group {
   _update() {
     this._syncGeometry();
     this._syncHead();
+    this._syncTail();
     applyDashPattern(this._shaft, this._dashes, this._dashed, this._dashOffset);
     this._label?.update(this._shaft, this._start, this._end, this._shaft.stroke as string);
 
