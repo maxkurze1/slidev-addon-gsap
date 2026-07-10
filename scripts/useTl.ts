@@ -1,6 +1,5 @@
 import { watch, onMounted, onBeforeMount, onUnmounted, shallowRef, nextTick } from "vue"
 import { useNav, useSlideContext } from "@slidev/client"
-
 import { gsap } from "gsap";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 import { Flip } from "gsap/Flip";
@@ -17,6 +16,8 @@ import { attachEffects, type TimelineEffects } from "./effects";
 gsap.registerPlugin(DrawSVGPlugin);
 gsap.registerPlugin(Flip);
 gsap.registerPlugin(GSDevTools);
+
+const CLICKS_MAX = 999999;
 
 type MorphTarget = string | Element | Element[] | null | undefined;
 
@@ -248,6 +249,10 @@ export function useTl() {
 
     if (active.value && urlclicks > 0)
       clicks?.maxMap?.set(id, urlclicks)
+
+    // workaround for export mode (delay click total inference)
+    if (isPrintMode.value)
+      clicks?.maxMap?.set(id, CLICKS_MAX)
   })
 
   onMounted(async () => {
