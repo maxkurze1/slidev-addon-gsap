@@ -8,19 +8,6 @@ import { captureSlide, applyMorph, type SlideMorphOptions, DEFAULT_ATTR } from "
 // Cross-slide magic-move, wired here once for the whole app (this component is always
 // mounted). Pair elements on adjacent slides with the same `data-morph="key"` are morphed
 // (during the slide transition)
-//
-// Options come from config, not code:
-//   • deck headmatter `morph:` — defaults for the whole deck
-//   • the lower-indexed slide's frontmatter `morph:` — the effect for a single
-//     morph. The pair is owned by the slide with the smaller index, so both
-//     directions look the same: 3→4 and 4→3 both use slide 3's `morph:`.
-//     ---
-//     morph: { duration: 1, ease: "power2.inOut" }
-//     ---
-//     (check SlideMorphOptions for all options)
-//
-// Disable cross-slide morphing deck-wide from the headmatter with either
-// `morph: false` or `morph: { enabled: false }`.
 const nav = useNav()
 
 // Raw headmatter value: an options object, `false` to disable, or undefined.
