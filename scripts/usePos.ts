@@ -1,4 +1,4 @@
-import { onUnmounted, onMounted } from "vue";
+import { onUnmounted, onMounted, getCurrentInstance } from "vue";
 import { useSlide } from "./useSlide";
 import { Vector } from "two.js/src/vector";
 import { gsap } from "gsap";
@@ -193,7 +193,22 @@ function anchorKey(name: string): AnchorKey | null {
   return (ANCHOR_KEYS as readonly string[]).includes(k) ? (k as AnchorKey) : null;
 }
 
-export function usePos() {
+// Per-component cache so `usePos()` is idempotent within a slide
+// weakly keyed by the Vue component -> cleaned up when the component unmounts.
+const instanceCache = new WeakMap<object, ReturnType<typeof createUsePos>>();
+
+export function usePos(): ReturnType<typeof createUsePos> {
+  const instance = getCurrentInstance();
+  if (instance) {
+    const cached = instanceCache.get(instance);
+    if (cached) return cached;
+  }
+  const pos = createUsePos();
+  if (instance) instanceCache.set(instance, pos);
+  return pos;
+}
+
+function createUsePos() {
   const slide = useSlide();
 
   type Tracked = {

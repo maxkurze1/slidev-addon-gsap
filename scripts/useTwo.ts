@@ -1,6 +1,7 @@
 import { onUnmounted, onMounted, shallowRef } from "vue";
 // import { onSlideEnter, onSlideLeave } from "@slidev/client";
 import { useSlide } from "./useSlide";
+import { usePos } from "./usePos";
 import { gsap } from "gsap";
 import Two from "two.js";
 import { createRefProxy } from "./proxxyref";
@@ -99,6 +100,8 @@ export function useTwo(config: TwoConfig = {}) {
   const merged = mergeConfig(deckConfig(), config);
   const two = shallowRef<TwoWithLayers | null>(null);
   const slide = useSlide();
+  // register a position resolver for anchor strings
+  usePos();
   const tickUpdate = () => {
     two.value?.update();
   };
