@@ -258,6 +258,12 @@ export function useTl() {
   onMounted(async () => {
     tl.value = attachStepFn(gsap.timeline({ paused: true, id: `slide-${$page.value}` }))
     step_idx = 0
+
+    // onBeforeMount reserved CLICKS_MAX release this reservation if no steps were added
+    if (isPrintMode.value) {
+      await nextTick()
+      if (step_idx === 0) clicks?.maxMap?.delete(id)
+    }
   })
 
   onSlideEnter(async (to_n, from_n) => {
