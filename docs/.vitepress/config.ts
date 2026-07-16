@@ -61,6 +61,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'API', link: '/api/' },
       { text: 'Examples', link: '/guide/examples' },
+      { text: 'FAQ', link: '/guide/faq' },
       // Absolute path (not a VitePress route) so it isn't prefixed with the
       // docs `base` — the deck lives outside the docs site, under `/demo`.
       { text: 'Demo', link: demoLink, target: '_blank' },
@@ -98,6 +99,7 @@ export default defineConfig({
           { text: 'API Reference', link: '/api/' },
           { text: 'Examples', link: '/guide/examples' },
           { text: 'Editor & AI Setup', link: '/guide/tooling' },
+          { text: 'FAQ & Troubleshooting', link: '/guide/faq' },
         ],
       },
     ],

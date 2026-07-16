@@ -170,3 +170,10 @@ Precedence (low → high): `twojs:` headmatter → `useTwo(config)` per slide �
 per-type bucket → per-call props.
 
 See the [API reference](/api/#usetwo).
+
+## Troubleshooting
+
+Shapes present in the DOM but invisible? See
+[FAQ → Two.js shapes are invisible](./faq#two-js-shapes-are-invisible-arrows-paths-circles-don-t-paint)
+— usually a deck CSS rule (UnoCSS attributify) dimming the `opacity` attribute
+Two.js writes on its groups.

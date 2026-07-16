@@ -1,0 +1,16 @@
+/*
+ * Auto-loaded by Slidev for any deck that lists this addon in `addons:`
+ * (Slidev imports `styles/index.css` from every addon root).
+ *
+ * Two.js's SVG renderer writes group opacity to an `opacity="…"` attribute,
+ * which sits below every stylesheet rule in the cascade. If a literal
+ * `opacity="1"` appears in the deck source, UnoCSS attributify (on by default in
+ * Slidev) emits a global `[opacity~="1"]{opacity:.01}` rule that matches every
+ * resting two.js group and makes shapes vanish. Re-assert the resting value so
+ * shapes paint by default. Only matches the attribute value `1`, so opacity
+ * animations (mid-tween values like 0.5) are untouched.
+ *
+ * Other literal values (e.g. `opacity="0.5"`) need the mirrored fix deck-side;
+ * see docs/guide/faq.md.
+ */
+svg [opacity~="1"] { opacity: 1 }
