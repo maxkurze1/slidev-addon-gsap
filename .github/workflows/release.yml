@@ -8,6 +8,14 @@
 # tag, writes it into package.json ephemerally (never committed), publishes to
 # npm, then pushes just the tag (pointing at the released commit) and cuts a
 # GitHub release. No commit is ever made to main.
+#
+# Publishing uses npm "trusted publishing" (OIDC) — no NPM_TOKEN. This requires
+# a Trusted Publisher for this workflow to be configured on npmjs.com (package
+# Settings → Trusted Publisher → GitHub Actions), which can only be done after
+# the package's first version exists. Bootstrap that first version once with a
+# local `npm login && pnpm publish`, then let this workflow take over.
+# NOTE: OIDC publish works on pnpm 10.x (pinned via packageManager) but is
+# broken on pnpm 11 — do not bump pnpm without re-checking pnpm/pnpm#11513.
 name: Release
 
 on:
@@ -21,9 +29,11 @@ on:
         options: [patch, minor, major]
         default: major
 
-# Needed to push the tag and create the GitHub release.
+# contents: write → push the tag and create the GitHub release.
+# id-token: write → mint the OIDC token npm uses for trusted publishing.
 permissions:
   contents: write
+  id-token: write
 
 # Serialize releases so two runs can't race on the version.
 concurrency:
@@ -67,12 +77,7 @@ jobs:
       - name: Write version into package.json (not committed)
         run: npm version "${{ steps.version.outputs.version }}" --no-git-tag-version --allow-same-version
 
-      - name: Authenticate to npm
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish to npm
+      - name: Publish to npm (OIDC trusted publishing)
         run: pnpm publish --no-git-checks
 
       - name: Tag the released commit
