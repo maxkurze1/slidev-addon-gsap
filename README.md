@@ -12,6 +12,8 @@ Docs: [maxkurze1.github.io/slidev-addon-gsap/docs](https://maxkurze1.github.io/s
 
 Live demo deck: [maxkurze1.github.io/slidev-addon-gsap/demo](https://maxkurze1.github.io/slidev-addon-gsap/demo/)
 
+NPM package: [npmjs.com/package/slidev-addon-gsap](https://www.npmjs.com/package/slidev-addon-gsap)
+
 ## Install
 
 ```bash
