@@ -17,7 +17,7 @@ NPM package: [npmjs.com/package/slidev-addon-gsap](https://www.npmjs.com/package
 ## Install
 
 ```bash
-$ pnpm install git+https://github.com/maxkurze1/slidev-addon-gsap.git
+$ pnpm install slidev-addon-gsap
 ```
 
 Enable it in your deck headmatter (the first `---` block). Slidev automatically
@@ -37,7 +37,7 @@ Then import the composables inside a slide's `<script setup>`:
 import { useTl, usePos, useTwo, useSlide } from 'slidev-addon-gsap'
 ```
 
-See [`example.md`](./example.md) for a full, runnable showcase of every feature.
+See [`example.mdc`](./example.mdc) for a full, runnable showcase of every feature.
 
 ## Features at a glance
 
@@ -135,33 +135,28 @@ morph: { duration: 0.4 }   # the lower-indexed slide of the pair owns the effect
 
 ## AI assistant skill
 
-This package ships an [Agent Skill](./skills/slidev-gsap/SKILL.md) so AI coding
-assistants (e.g. Claude Code) know the full API and conventions when helping you
-author decks that use this addon.
+This package ships an [Agent Skill](./skills/slidev-addon-gsap/SKILL.md) so AI
+coding assistants (e.g. Claude Code) know the full API and conventions when
+helping you author decks that use this addon.
 
-### Load it into a repo that uses this library
+### Install it with `npx skills`
 
-After installing the addon, copy (or symlink) the skill into your presentation
-repo's `.claude/skills/` directory, which Claude Code auto-discovers:
-
-```bash
-# copy — a static snapshot
-mkdir -p .claude/skills
-cp -r node_modules/slidev-addon-gsap/skills/slidev-gsap .claude/skills/
-
-# …or symlink — stays in sync when you update the addon
-ln -s ../../node_modules/slidev-addon-gsap/skills/slidev-gsap .claude/skills/slidev-gsap
-```
-
-For all your projects at once, copy it into the global skills dir instead:
+The easiest way is the [`skills`](https://github.com/vercel-labs/skills) CLI,
+which installs the skill straight from this repo into your project (or global)
+agent config:
 
 ```bash
-cp -r node_modules/slidev-addon-gsap/skills/slidev-gsap ~/.claude/skills/
+# into the current repo's .claude/skills/
+npx skills add maxkurze1/slidev-addon-gsap
+
+# …or for all your projects at once
+npx skills add -g maxkurze1/slidev-addon-gsap
 ```
 
 The assistant then picks up the skill whenever you ask it to create or edit
 slides for a deck using this addon. Other agent tools that support a skills /
-rules directory can point at the same [`SKILL.md`](./skills/slidev-gsap/SKILL.md).
+rules directory can point at the same
+[`SKILL.md`](./skills/slidev-addon-gsap/SKILL.md).
 
 ## Contributing
 <!-- https://sli.dev/guide/write-theme.html --->
@@ -169,5 +164,5 @@ rules directory can point at the same [`SKILL.md`](./skills/slidev-gsap/SKILL.md
 - `pnpm install`
 - `pnpm run dev` to start the preview of `example.md`
 - Edit `example.md` and the `scripts/` composables to see changes
-- The skill in [`skills/slidev-gsap/SKILL.md`](./skills/slidev-gsap/SKILL.md) is
+- The skill in [`skills/slidev-addon-gsap/SKILL.md`](./skills/slidev-addon-gsap/SKILL.md) is
   the canonical API reference — keep it in sync when the API changes.
