@@ -1,0 +1,84 @@
+# Automatic versioning + npm publish.
+#
+#   • Every push to main            → automatic PATCH bump
+#   • Manual "Run workflow" dispatch → pick patch / minor / MAJOR (for breaking releases)
+#
+# The version lives ONLY in git tags — package.json stays at the 0.0.0
+# placeholder in the repo. Each run derives the next version from the latest
+# tag, writes it into package.json ephemerally (never committed), publishes to
+# npm, then pushes just the tag (pointing at the released commit) and cuts a
+# GitHub release. No commit is ever made to main.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump for this manual release"
+        type: choice
+        options: [patch, minor, major]
+        default: major
+
+# Needed to push the tag and create the GitHub release.
+permissions:
+  contents: write
+
+# Serialize releases so two runs can't race on the version.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history + tags so we can read the latest version tag.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Compute next version
+        id: version
+        # Derive from the latest v* tag, then bump the requested part.
+        # On push there is no input → default to a patch bump.
+        run: |
+          BUMP="${{ github.event.inputs.bump || 'patch' }}"
+          LATEST=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+          LATEST=${LATEST:-v0.0.0}
+          IFS=. read -r MA MI PA <<< "${LATEST#v}"
+          case "$BUMP" in
+            major) MA=$((MA + 1)); MI=0; PA=0 ;;
+            minor) MI=$((MI + 1)); PA=0 ;;
+            patch) PA=$((PA + 1)) ;;
+          esac
+          NEW="$MA.$MI.$PA"
+          echo "Bumping $LATEST -> v$NEW ($BUMP)"
+          echo "tag=v$NEW"    >> "$GITHUB_OUTPUT"
+          echo "version=$NEW" >> "$GITHUB_OUTPUT"
+
+      - name: Write version into package.json (not committed)
+        run: npm version "${{ steps.version.outputs.version }}" --no-git-tag-version --allow-same-version
+
+      - name: Authenticate to npm
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm
+        run: pnpm publish --no-git-checks
+
+      - name: Tag the released commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+          gh release create "${{ steps.version.outputs.tag }}" --generate-notes

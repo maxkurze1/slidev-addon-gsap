@@ -1,8 +1,9 @@
 {
   "name": "slidev-addon-gsap",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "type": "module",
   "description": "Integrate GSAP animations into SliDev",
+  "license": "GPL-3.0-or-later",
   "packageManager": "pnpm@10.33.2",
   "exports": {
     ".": "./index.ts",
@@ -12,6 +13,25 @@
     "slidev-addon",
     "slidev",
     "GSAP"
+  ],
+  "homepage": "https://maxkurze1.github.io/slidev-addon-gsap/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxkurze1/slidev-addon-gsap.git"
+  },
+  "bugs": {
+    "url": "https://github.com/maxkurze1/slidev-addon-gsap/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "index.ts",
+    "global-bottom.vue",
+    "scripts",
+    "styles",
+    "README.md",
+    "LICENSE.md"
   ],
   "engines": {
     "node": ">=18.0.0"

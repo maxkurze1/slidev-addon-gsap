@@ -1,3 +1,5 @@
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 # GSAP Addon for Slidev
 
 A [GSAP](https://gsap.com/) + [Two.js](https://two.js.org/) addon for
