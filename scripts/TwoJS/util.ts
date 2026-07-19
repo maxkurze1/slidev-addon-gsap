@@ -11,8 +11,13 @@ export type AnchorLike =
   | (() => XY | { center: XY } | string);
 export type TwoLike = Two | { frontTwo?: Two; backTwo?: Two };
 
-function log_warning(v, ...args){
-  console.warn("WARNING:", args);
+const _warned = new Set<string>();
+function log_warning(v : any, ...args : any[]){
+  const key = JSON.stringify(args);
+  if (!_warned.has(key)) {
+    _warned.add(key);
+    console.warn("WARNING:", args);
+  }
   return v
 }
 
@@ -73,9 +78,7 @@ export function resolveVec(...args: any[]): Vector | null {
 
 /**
  * Expand a position argument for the mk* factories. A string reference fans
- * out to one entry per matching element (so `mkPath("#id@tr")` behaves exactly
- * like `mkPath(pos("#id@tr"))`); string entries inside an explicit array are
- * expanded in place. Anything else passes through untouched.
+ * out to one entry per matching element
  *
  * Returns the items plus whether the original argument was "plural" — used by
  * the factories to decide between returning a single shape or an array.
@@ -109,8 +112,7 @@ export function expandPositions(
  *   (so thicker lines get proportionally larger dashes);
  * - otherwise the shaft is drawn solid (empty pattern).
  *
- * `offset` shifts the pattern along the path — animate it (e.g. with GSAP) for a
- * marching-ants effect. It is reapplied every frame, so it stays live.
+ * `offset` shifts the pattern along the path
  */
 export function applyDashPattern(
   shaft: { linewidth?: number; dashes?: any } | null | undefined,
@@ -129,16 +131,12 @@ export function applyDashPattern(
   shaft.dashes = arr;
 }
 
-export function resolveTwoInstance(two: TwoLike): Two | null {
-  const anyTwo = two as any;
-  if (anyTwo?.scene?.add) return anyTwo as Two;
-  if (anyTwo?.frontTwo?.scene?.add) return anyTwo.frontTwo as Two;
-  if (anyTwo?.backTwo?.scene?.add) return anyTwo.backTwo as Two;
-  return null;
-}
-
 export function requireTwoInstance(two: TwoLike, fnName: string): Two {
-  const resolved = resolveTwoInstance(two);
+  const anyTwo = two as any;
+  let resolved = null
+  if (anyTwo?.scene?.add) resolved = anyTwo as Two;
+  if (anyTwo?.frontTwo?.scene?.add) resolved = anyTwo.frontTwo as Two;
+  if (anyTwo?.backTwo?.scene?.add) resolved = anyTwo.backTwo as Two;
   if (resolved) return resolved;
   throw new Error(
     `${fnName} expected a Two instance (or layered useTwo object with frontTwo/backTwo).`,
@@ -180,6 +178,25 @@ function wrapForGsap<T extends object>(target: T): T {
 
   _gsapTargetWrappers.set(target, proxy);
   return proxy;
+}
+
+/**
+ * Scope string selectors to a slide root. A bare string becomes the elements it
+ * matches inside `root` (querySelectorAll); arrays are scoped element-wise;
+ * everything else (elements, Two.js objects, null) passes through untouched.
+ */
+export function scopeTargetsToSlide(
+  targets: any,
+  root: HTMLElement | null,
+): any {
+  if (typeof targets === "string") {
+    if (!root) return [];
+    return Array.from(root.querySelectorAll(targets));
+  }
+  if (Array.isArray(targets)) {
+    return targets.map((t) => scopeTargetsToSlide(t, root));
+  }
+  return targets;
 }
 
 /**

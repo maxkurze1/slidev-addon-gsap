@@ -114,8 +114,7 @@ export function useTwo(config: TwoConfig = {}) {
       root.style.position = "relative";
     }
 
-    const w = slideWidth.value || 980;
-    const h = slideHeight.value || Math.ceil(w / (16 / 9));
+    const w = slideWidth.value, h = slideHeight.value;
 
     const backTwo = new Two({ width: w, height: h }).appendTo(root);
     const frontTwo = new Two({ width: w, height: h }).appendTo(root);
@@ -135,11 +134,9 @@ export function useTwo(config: TwoConfig = {}) {
 
     two.value = {
       ...front,
-      front,
-      back,
+      front, back,
       layer: (name: LayerName) => (name === "back" ? back : front),
-      frontTwo,
-      backTwo,
+      frontTwo, backTwo,
       update: () => {
         backTwo.update();
         frontTwo.update();

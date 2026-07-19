@@ -16,12 +16,11 @@ export function createRefProxy<T extends object>(
       if (prop === "ref") return source;
       if (prop === "isReady") return source.value !== null;
 
-      const current = source.value;
-      if (!current)
+      if (!source.value)
         throw new Error(`${label} is not ready yet. Access it inside onMounted / onSlideEnter.`);
 
-      const value = (current as any)[prop];
-      return typeof value === "function" ? value.bind(current) : value;
+      const value = (source.value as any)[prop];
+      return typeof value === "function" ? value.bind(source.value) : value;
     },
     set(_target, prop, value) {
       if (prop === "value") {
@@ -29,11 +28,10 @@ export function createRefProxy<T extends object>(
         return true;
       }
 
-      const current = source.value;
-      if (!current)
+      if (!source.value)
         throw new Error(`${label} is not ready yet. Access it inside onMounted / onSlideEnter.`);
 
-      (current as any)[prop] = value;
+      (source.value as any)[prop] = value;
       return true;
     },
     has(_target, prop) {
@@ -52,8 +50,7 @@ export function createRefProxy<T extends object>(
       return Object.getOwnPropertyDescriptor(source.value as any, prop);
     },
     getPrototypeOf() {
-      const current = source.value;
-      return current ? Object.getPrototypeOf(current) : Object.prototype;
+      return source.value ? Object.getPrototypeOf(source.value) : Object.prototype;
     },
   });
 }

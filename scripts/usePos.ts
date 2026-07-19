@@ -320,7 +320,7 @@ function createUsePos() {
     const animating = hasActiveGsapAnimations();
     staleFrames = animating ? 0 : staleFrames + 1;
 
-    // "staleFrames > num" ensures that num frames are rendered after animation stopped
+    // "staleFrames > num" ensures that num frames are rendered after an animation stopped
     if (!hasDirtyWork && !animating && (staleFrames > 1)) return;
     const slideRect = root.getBoundingClientRect();
     hasDirtyWork = Boolean(!slideRect.width || !slideRect.height);
@@ -385,8 +385,6 @@ function createUsePos() {
 
   onMounted(() => {
     unregisterResolver ??= registerPositionResolver(resolveRef);
-    window.addEventListener("resize", markDirty, { passive: true });
-    window.addEventListener("scroll", markDirty, { passive: true });
     markDirty();
   });
 
@@ -403,8 +401,6 @@ function createUsePos() {
     gsap.ticker.remove(updateAll);
     unregisterResolver?.();
     unregisterResolver = null;
-    window.removeEventListener("resize", markDirty);
-    window.removeEventListener("scroll", markDirty);
     tracked.clear();
     trackedBySelector.clear();
   });

@@ -164,18 +164,13 @@ type AnyTl = gsap.core.Timeline & Record<string, any>;
  */
 export function attachEffects<T extends gsap.core.Timeline>(
   tl: T,
-  getRoot?: () => HTMLElement | null,
+  // Maps a target to the element(s) an effect should act on. `useTl` passes a
+  // slide-scoping resolver so string selectors resolve within the slide; the
+  // default identity lets effects work on ANY timeline (e.g. docs demos), where
+  // GSAP resolves selectors globally.
+  resolveTargets: (target: any) => any = (target) => target,
 ): T & TimelineEffects {
   const t = tl as AnyTl;
-
-  // Resolve a target to the element(s) to split. String selectors are scoped to
-  // the slide root (same contract as the patched from/to); elements/arrays pass
-  // through. Falls back to global resolution when no root is available.
-  const resolveTargets = (target: any): any => {
-    if (typeof target !== "string") return target;
-    const root = getRoot?.() ?? null;
-    return root ? Array.from(root.querySelectorAll(target)) : target;
-  };
 
   const FROM = (base: gsap.TweenVars) =>
     function (this: AnyTl, target: any, vars: EffectVars = {}, position?: Pos) {
