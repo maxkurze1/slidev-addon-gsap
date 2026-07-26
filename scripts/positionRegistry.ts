@@ -15,13 +15,47 @@ export type LazyVec = () => VecLike;
 // (e.g. unknown anchor name).
 export type PositionResolver = (selector: string, anchor: string) => readonly LazyVec[] | null;
 
-const resolvers = new Set<PositionResolver>();
+// Each resolver remembers the slide root it belongs to. In print/export "with
+// clicks" the SAME slide is mounted once per click step at the same time, so
+// several resolvers can match the same selector — each against a DOM subtree
+// frozen at a different click. Without scoping, `resolvePositionRefAll` would
+// return whichever registered first, so every step's shapes would read the wrong
+// step's element positions. `preferredRoot` lets the owning slide be consulted
+// first (see `setPreferredResolverRoot`).
+type ResolverEntry = { resolver: PositionResolver; root: HTMLElement | null };
 
-/** Register a resolver. Returns an unregister callback. */
-export function registerPositionResolver(resolver: PositionResolver): () => void {
-  resolvers.add(resolver);
+const resolvers = new Set<ResolverEntry>();
+
+// While set, resolution prefers the resolver registered for this exact slide
+// root. `useTwo` sets it around shape creation and around each render tick, so a
+// reference resolves against the slide that actually owns the shape.
+let preferredRoot: HTMLElement | null = null;
+
+/** Scope the next resolutions to a slide root (null clears). */
+export function setPreferredResolverRoot(root: HTMLElement | null): void {
+  preferredRoot = root;
+}
+
+/** Run `fn` with resolution scoped to `root`, restoring the previous scope after. */
+export function withResolverRoot<T>(root: HTMLElement | null, fn: () => T): T {
+  const prev = preferredRoot;
+  preferredRoot = root;
+  try {
+    return fn();
+  } finally {
+    preferredRoot = prev;
+  }
+}
+
+/** Register a resolver for a slide root. Returns an unregister callback. */
+export function registerPositionResolver(
+  resolver: PositionResolver,
+  root: HTMLElement | null = null,
+): () => void {
+  const entry: ResolverEntry = { resolver, root };
+  resolvers.add(entry);
   return () => {
-    resolvers.delete(resolver);
+    resolvers.delete(entry);
   };
 }
 
@@ -51,8 +85,17 @@ export function parsePositionRef(ref: string): { selector: string; anchor: strin
  */
 export function resolvePositionRefAll(ref: string): readonly LazyVec[] | null {
   const { selector, anchor } = parsePositionRef(ref);
-  for (const resolver of resolvers) {
-    const got = resolver(selector, anchor);
+  // Prefer the resolver of the slide that owns the current shape, so duplicate
+  // slide instances (print/export "with clicks") each read their own DOM.
+  if (preferredRoot) {
+    for (const entry of resolvers) {
+      if (entry.root !== preferredRoot) continue;
+      const got = entry.resolver(selector, anchor);
+      if (got && got.length > 0) return got;
+    }
+  }
+  for (const entry of resolvers) {
+    const got = entry.resolver(selector, anchor);
     if (got && got.length > 0) return got;
   }
   return null;

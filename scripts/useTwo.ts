@@ -4,7 +4,8 @@ import { useSlide } from "./useSlide";
 import { usePos } from "./usePos";
 import { gsap } from "gsap";
 import Two from "two.js";
-import { createRefProxy } from "./proxxyref";
+import { createRefProxy } from "./proxyref";
+import { withResolverRoot } from "./positionRegistry";
 import { makeArrow, makePath } from "./TwoJS/Path";
 import { makeCircle } from "./TwoJS/Circle";
 import { onSlideEnter, onSlideLeave } from "./util";
@@ -129,18 +130,30 @@ export function useTwo(config: TwoConfig = {}) {
     root.prepend(backEl);
     root.append(frontEl);
 
-    const front = createLayerApi(frontTwo, merged);
-    const back = createLayerApi(backTwo, merged);
+    // Shapes fan out over string references at creation time (e.g. one arrow per
+    // matched element), which hits the position registry. Scope that lookup to
+    // this slide root so a duplicate mounted instance (print/export "with clicks")
+    // resolves against its own DOM, not another step's.
+    const scopeApi = (api: LayerApi): LayerApi => ({
+      mkArrow: (...args) => withResolverRoot(root, () => api.mkArrow(...args)),
+      mkPath: (...args) => withResolverRoot(root, () => api.mkPath(...args)),
+      mkCircle: (...args) => withResolverRoot(root, () => api.mkCircle(...args)),
+    });
+
+    const front = scopeApi(createLayerApi(frontTwo, merged));
+    const back = scopeApi(createLayerApi(backTwo, merged));
 
     two.value = {
       ...front,
       front, back,
       layer: (name: LayerName) => (name === "back" ? back : front),
       frontTwo, backTwo,
-      update: () => {
+      // Same scoping for the per-frame redraw: paths/circles re-resolve their
+      // live references on every update, so pin resolution to this slide root.
+      update: () => withResolverRoot(root, () => {
         backTwo.update();
         frontTwo.update();
-      },
+      }),
       pause: () => {
         backTwo.pause();
         frontTwo.pause();

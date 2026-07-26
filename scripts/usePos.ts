@@ -248,24 +248,27 @@ function createUsePos() {
     const W = slideWidth.value || 980;
     const H = slideHeight.value || Math.ceil(W / (16 / 9));
 
-    const centerX = ((rect.left - slideRect.left + rect.width / 2) / slideRect.width) * W;
-    const centerY = ((rect.top - slideRect.top + rect.height / 2) / slideRect.height) * H;
+    const center = new Vector(
+      ((rect.left - slideRect.left + rect.width / 2) / slideRect.width) * W,
+      ((rect.top - slideRect.top + rect.height / 2) / slideRect.height) * H,
+    )
     const leftX = ((rect.left - slideRect.left) / slideRect.width) * W;
     const rightX = ((rect.left - slideRect.left + rect.width) / slideRect.width) * W;
     const topY = ((rect.top - slideRect.top) / slideRect.height) * H;
     const bottomY = ((rect.top - slideRect.top + rect.height) / slideRect.height) * H;
 
     // --- Axis-aligned (bounding-box) anchors ---
-    dest.center.x = centerX; dest.center.y = centerY;
-    dest.c.x = centerX; dest.c.y = centerY;
-    dest.top.x = centerX; dest.top.y = topY;
-    dest.t.x = centerX; dest.t.y = topY;
-    dest.bottom.x = centerX; dest.bottom.y = bottomY;
-    dest.b.x = centerX; dest.b.y = bottomY;
-    dest.left.x = leftX; dest.left.y = centerY;
-    dest.l.x = leftX; dest.l.y = centerY;
-    dest.right.x = rightX; dest.right.y = centerY;
-    dest.r.x = rightX; dest.r.y = centerY;
+    dest.center = center
+    // ; dest.center.y = centerY;
+    dest.c = center
+    dest.top.x = center.x; dest.top.y = topY;
+    dest.t.x = center.x; dest.t.y = topY;
+    dest.bottom.x = center.x; dest.bottom.y = bottomY;
+    dest.b.x = center.x; dest.b.y = bottomY;
+    dest.left.x = leftX; dest.left.y = center.y;
+    dest.l.x = leftX; dest.l.y = center.y;
+    dest.right.x = rightX; dest.right.y = center.y;
+    dest.r.x = rightX; dest.r.y = center.y;
     dest.topright.x = rightX; dest.topright.y = topY;
     dest.tr.x = rightX; dest.tr.y = topY;
     dest.bottomright.x = rightX; dest.bottomright.y = bottomY;
@@ -303,14 +306,14 @@ function createUsePos() {
       dest[k1].x = x; dest[k1].y = y;
       dest[k2].x = x; dest[k2].y = y;
     };
-    set("east", "e", centerX + eX, centerY + eY);
-    set("west", "w", centerX - eX, centerY - eY);
-    set("south", "s", centerX + sX, centerY + sY);
-    set("north", "n", centerX - sX, centerY - sY);
-    set("northeast", "ne", centerX + eX - sX, centerY + eY - sY);
-    set("northwest", "nw", centerX - eX - sX, centerY - eY - sY);
-    set("southeast", "se", centerX + eX + sX, centerY + eY + sY);
-    set("southwest", "sw", centerX - eX + sX, centerY - eY + sY);
+    set("east", "e", center.x + eX, center.y + eY);
+    set("west", "w", center.x - eX, center.y - eY);
+    set("south", "s", center.x + sX, center.y + sY);
+    set("north", "n", center.x - sX, center.y - sY);
+    set("northeast", "ne", center.x + eX - sX, center.y + eY - sY);
+    set("northwest", "nw", center.x - eX - sX, center.y - eY - sY);
+    set("southeast", "se", center.x + eX + sX, center.y + eY + sY);
+    set("southwest", "sw", center.x - eX + sX, center.y - eY + sY);
   }
 
   function updateAll() {
@@ -384,7 +387,10 @@ function createUsePos() {
   let unregisterResolver: (() => void) | null = null;
 
   onMounted(() => {
-    unregisterResolver ??= registerPositionResolver(resolveRef);
+    // Tag the resolver with this slide root so references resolve against the
+    // right instance when the same slide is mounted several times at once
+    // (print/export "with clicks").
+    unregisterResolver ??= registerPositionResolver(resolveRef, slide.value);
     markDirty();
   });
 
