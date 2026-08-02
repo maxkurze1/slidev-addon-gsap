@@ -21,6 +21,19 @@ const CLICKS_MAX = 999999;
 
 type MorphTarget = string | Element | Element[] | null | undefined;
 
+type MorphOptions = {
+  /** Morph duration in seconds. Default 0.8. */
+  duration?: number;
+  ease?: string;
+  /** `true` scales via transform, `false` animates width/height. Default true. */
+  scale?: boolean;
+  /**
+   * Leave `a` in place and visible — `b` still emerges from `a`'s box, so it
+   * reads as `a` spawning a copy. Default false (i.e. `a` becomes `b`).
+   */
+  keep?: boolean;
+} & Record<string, any>;
+
 // A recorded morph, so its Flip geometry can be (re)built on slide-enter when
 // the elements are actually laid out (at mount they may be display:none).
 type MorphSpec = {
@@ -31,6 +44,7 @@ type MorphSpec = {
     duration: number;
     ease: string;
     scale: boolean;
+    keep: boolean;
   } & Record<string, any>
 };
 
@@ -40,7 +54,7 @@ type StepTimeline = gsap.core.Timeline & TimelineEffects & {
   /**
    * Morph element `a` onto element `b`'s position and size.
    */
-  morph(a: MorphTarget, b: MorphTarget, opts?: {}): StepTimeline
+  morph(a: MorphTarget, b: MorphTarget, opts?: MorphOptions): StepTimeline
 }
 
 type TimelineMethodName = "from" | "to" | "fromTo";
@@ -89,7 +103,7 @@ export function useTl() {
     }
     tl.click = tl.step;
 
-    tl.morph = function (this: StepTimeline, a: MorphTarget, b: MorphTarget, opts: {}) {
+    tl.morph = function (this: StepTimeline, a: MorphTarget, b: MorphTarget, opts?: MorphOptions) {
       const elA = firstTarget(a, slide.value);
       const elB = firstTarget(b, slide.value);
       if (!elA || !elB) {
@@ -97,14 +111,16 @@ export function useTl() {
         return this;
       }
 
-      const optsd = { duration: 0.8, ease: "power1.inOut", scale: true, ...opts }
+      const optsd = { duration: 0.8, ease: "power1.inOut", scale: true, keep: false, ...opts }
       // Append at the current end so the morph occupies this click's interval.
       const at = this.duration();
 
       // Reserve the "slot" with layout-independent tweens
       // the actual fit is built in refreshMorphs() on slide-enter
       // here `display` might be `none`
-      this.to(elA, { autoAlpha: 0, duration: optsd.duration, ease: optsd.ease }, at);
+      // With `keep`, A neither moves nor fades — only B travels out of its box.
+      if (!optsd.keep)
+        this.to(elA, { autoAlpha: 0, duration: optsd.duration, ease: optsd.ease }, at);
       this.from(elB, { autoAlpha: 0, duration: optsd.duration, ease: optsd.ease }, at);
 
       morphSpecs.push({ elA, elB, at, opts: optsd });
@@ -162,12 +178,15 @@ export function useTl() {
       // render all ealier tweens to the DOM
       t.seek(s.at, true);
 
-      const fitA = Flip.fit(s.elA, s.elB, s.opts);
+      const { keep, ...fitOpts } = s.opts;
+      // `keep` leaves A alone — B alone emerging from A's box already reads as A
+      // spawning a copy, so no stand-in element is needed.
+      const fitA = keep ? null : Flip.fit(s.elA, s.elB, fitOpts);
       // B travels the same box→box path as A: snap it onto A's current box,
       // then animate back to its own, so the two stay overlapped and cross-fade.
       const natural = Flip.getState(s.elB);
       Flip.fit(s.elB, s.elA, { scale: s.opts.scale });
-      const fitB = Flip.to(natural, s.opts);
+      const fitB = Flip.to(natural, fitOpts);
 
       if (fitA) t.add(fitA as gsap.core.Tween, s.at);
       if (fitB) t.add(fitB, s.at);

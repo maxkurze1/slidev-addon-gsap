@@ -39,11 +39,14 @@ tl.morph(a: string | Element, b: string | Element, opts?: {
   duration?: number   // default 0.8
   ease?: string       // default 'power1.inOut'
   scale?: boolean     // default true (transform scaling) | false (width/height)
+  keep?: boolean      // default false — true: `a` stays put, `b` splits off it
 }): StepTimeline
 ```
 
 Transforms `a` to fit `b`'s position and size and cross-fades into it, as one
-timeline step. See the [Morph guide](/guide/morph).
+timeline step. With `keep: true`, `a` stays in place and visible while `b` still
+flies out of its box — a duplication rather than a hand-off. See the
+[Morph guide](/guide/morph).
 
 ---
 

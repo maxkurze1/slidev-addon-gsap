@@ -297,7 +297,7 @@ onMounted(() => {
     .step()
     .morph(".m-a", ".m-b")
     .step()
-    .morph(".m-b", ".m-c")
+    .morph(".m-b", ".m-c", { keep: true, scale: false })
     .step()
 })
 </script>
@@ -310,18 +310,20 @@ timeline, so it reverses on click-back and seeks correctly on refresh.
 
 ```ts
 tl.step().morph(".a", ".b") // A → B's box
-  .step().morph(".b", ".c") // B → C's box
-  .step()
+  .step().morph(".b", ".c", { keep: true })
+  .step()               // B stays, C splits off
 ```
 
 Selectors are scoped to the slide, and **B is auto-hidden** until the morph
-reveals it. Options:
+reveals it. With `keep`, the source stays put and the target flies **out of** it
+— a duplication instead of a hand-off. Options:
 
 ```ts
 tl.morph(".a", ".b", {
   duration: 1,        // default 0.8
   ease: "power2.inOut",
   scale: false,       // resize w/h
+  keep: true,         // A stays, B splits off
 })
 ```
 

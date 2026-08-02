@@ -78,9 +78,13 @@ tl.step()
   .step()
   .morph('.b', '.c', { duration: 1, ease: 'power2.inOut', scale: false })
   .step()
+  .morph('.c', '.d', { keep: true }) // C stays put, D splits off from it
+  .step()
 ```
 Options: `duration` (default `0.8`), `ease`, `scale` (default `true` = cheap
-transform scaling, may stretch contents; `false` = animate width/height instead).
+transform scaling, may stretch contents; `false` = animate width/height instead),
+`keep` (default `false`; `true` leaves A in place and visible while B still flies
+out of A's box — use it for "A spawns B" rather than "A becomes B").
 
 ### Preset effects — chainable one-liners with good defaults
 
