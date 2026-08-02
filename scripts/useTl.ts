@@ -5,7 +5,7 @@ import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 import { Flip } from "gsap/Flip";
 // import { GSDevTools } from "gsap/GSDevTools";
 
-import { createRefProxy } from "./proxxyref"
+import { createRefProxy } from "./proxyref"
 import { toGsapTargets, scopeTargetsToSlide } from "./TwoJS/util";
 import { useSlide } from "./useSlide";
 
@@ -49,8 +49,11 @@ type MorphSpec = {
 };
 
 type StepTimeline = gsap.core.Timeline & TimelineEffects & {
-  step(): StepTimeline
-  click(): StepTimeline
+  /**
+   * Mark a click step with an optional `delay` (in seconds)
+   */
+  step(delay?: number): StepTimeline
+  click(delay?: number): StepTimeline
   /**
    * Morph element `a` onto element `b`'s position and size.
    */
@@ -94,11 +97,12 @@ export function useTl() {
         return original.apply(this, args);
       };
     }
-    tl.step = function () {
+    tl.step = function (delay?: number) {
       this.addLabel("step-" + String(step_idx))
       // write maxMap directly to avoid the clicks.register() post-mount warning
       // The maxMap returns a reactive clicks map
       clicks?.maxMap?.set(id, step_idx++)
+      if (delay && delay > 0) this.to({}, { duration: delay })
       return this
     }
     tl.click = tl.step;
