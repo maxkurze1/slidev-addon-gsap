@@ -247,9 +247,6 @@ transition: slide-left
 ```
 
 - Works with **any** transition (fade, slide, zoom…).
-- The morph runs in the entering slide's own coordinate space, so `usePos`
-  anchors and `useTwo` shapes may point at a `data-morph` element — they follow
-  it through the morph.
 - Keys must be **unique within a slide**.
 - Options come from frontmatter: deck headmatter `morph:` for defaults, then the
   **lower-indexed** slide of the pair's `morph:` (`duration`, `ease`, `fade`) —
