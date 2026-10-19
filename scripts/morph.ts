@@ -26,8 +26,17 @@ type Pending = {
   state: ReturnType<typeof Flip.getState>;
   ids: Set<string>;
   fromNo: string;
+  /**
+   * Where the leaving slide sat on screen when the geometry was recorded. Flip
+   * records viewport coordinates, so this is the origin they are relative to —
+   * `rebaseState` needs it to move them onto the entering slide.
+   */
+  root: DOMRect;
 };
 let pending: Pending | null = null;
+
+const slideRoot = (no: number | string) =>
+  document.querySelector<HTMLElement>(`.slidev-page-${no}`);
 
 /**
  * Snapshot the leaving slide's morph elements while it's still at rest. Call
@@ -41,10 +50,13 @@ export function captureSlide(
 ) {
   pending = null;
   if (fromNo == null) return;
-  const fromRoot = document.querySelector(`.slidev-page-${fromNo}`);
+  const fromRoot = slideRoot(fromNo);
   if (!fromRoot) return;
   const els = Array.from(fromRoot.querySelectorAll<HTMLElement>(`[${attribute}]`));
   if (els.length === 0) return;
+
+  const root = fromRoot.getBoundingClientRect();
+  if (!root.width || !root.height) return;
 
   const ids = new Set<string>();
   for (const el of els) {
@@ -52,7 +64,53 @@ export function captureSlide(
     el.setAttribute("data-flip-id", id);
     ids.add(id);
   }
-  pending = { state: Flip.getState(els), ids, fromNo: String(fromNo) };
+  pending = { state: Flip.getState(els), ids, fromNo: String(fromNo), root };
+}
+
+/**
+ * Move the recorded viewport geometry from the leaving slide's box onto the
+ * entering one's, so the flip plays out inside the entering slide's own
+ * coordinate space.
+ *
+ * Both slides occupy the same box once they are at rest, but the entering one
+ * is mid-transition when the flip starts: `slide-left` & co. have it translated
+ * by up to a full slide width. Without rebasing, the flip's start geometry
+ * lands that far *outside* the entering slide — and everything that lives in
+ * slide coordinates goes with it. `usePos` anchors then report positions off
+ * the slide, and the Two.js layers drawn from them are clipped to the slide, so
+ * an arrow anchored to a morphing element is drawn off-canvas for the whole
+ * transition instead of following it.
+ *
+ * Rebasing makes the morph a pure in-slide move: identical geometry under every
+ * transition (rather than depending on where the incoming slide happened to be
+ * on the frame the flip was built), and anchors that stay valid from the first
+ * frame of the morph to the last.
+ *
+ * Only Flip's own recorded boxes are touched (`bounds`, plus the `e`/`f`
+ * translation of the global matrix); if a future GSAP changes that shape, the
+ * state is left alone and the morph falls back to the previous geometry.
+ */
+function rebaseState(handoff: Pending, toRoot: HTMLElement): void {
+  const to = toRoot.getBoundingClientRect();
+  if (!to.width || !to.height) return;
+
+  const dx = to.left - handoff.root.left;
+  const dy = to.top - handoff.root.top;
+  if (!dx && !dy) return;
+
+  const states = (handoff.state as any)?.elementStates;
+  if (!Array.isArray(states)) return;
+
+  for (const elState of states) {
+    const b = elState?.bounds;
+    if (b) elState.bounds = new DOMRect(b.x + dx, b.y + dy, b.width, b.height);
+    const m = elState?.matrix;
+    // The global matrix carries the element's absolute translation in e/f.
+    if (m && typeof m.e === "number" && typeof m.f === "number") {
+      m.e += dx;
+      m.f += dy;
+    }
+  }
 }
 
 /**
@@ -75,12 +133,14 @@ export function applyMorph(
   const fade = options.fade ?? true;
 
   nextTick(() => {
-    const toRoot = document.querySelector(`.slidev-page-${toNo}`);
+    const toRoot = slideRoot(toNo);
     if (!toRoot) return;
     const targets = Array.from(toRoot.querySelectorAll<HTMLElement>(`[${attribute}]`))
       .filter((el) => handoff.ids.has(el.getAttribute(attribute) || ""));
     if (targets.length === 0) return;
     for (const el of targets) el.setAttribute("data-flip-id", el.getAttribute(attribute) || "");
+
+    rebaseState(handoff, toRoot);
 
     Flip.from(handoff.state, { targets, duration, ease, fade });
   });

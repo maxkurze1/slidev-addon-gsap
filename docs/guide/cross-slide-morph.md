@@ -33,6 +33,13 @@ from that geometry — concurrently with the slide transition, using GSAP Flip.
 It runs in a global router guard mounted by the addon, so it works for **any**
 transition (fade, slide, zoom…).
 
+The captured geometry is re-based onto the entering slide, so the morph plays out
+in that slide's own coordinate space rather than in screen space. It therefore
+looks the same under every transition, and elements anchored to a morphing one —
+[`usePos`](./use-pos) anchors and the [`useTwo`](./use-two) arrows/paths drawn
+from them — track it correctly for the whole morph instead of being dragged
+outside the slide (where they'd be clipped) while a moving transition is running.
+
 ## Configuration (frontmatter)
 
 Options come from config, not code. Precedence: \
