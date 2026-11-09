@@ -60,7 +60,7 @@ onMounted(() => {
 ```
 
 - `step()` (alias `click()`) — marks a click boundary; returns the timeline for chaining.
-- `.from` / `.to` / `.fromTo` — plain GSAP tweens. **CSS selectors are auto-scoped
+- `.from` / `.to` / `.fromTo` / `.set` — plain GSAP tweens. **CSS selectors are auto-scoped
   to the current slide**, so `'.box'` only matches inside this slide.
 - Everything between two `step()` calls plays as one click.
 - Standard GSAP applies: `stagger`, `ease`, `duration`, relative time `'-=0.3'`, labels.

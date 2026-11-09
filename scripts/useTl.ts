@@ -60,7 +60,7 @@ type StepTimeline = gsap.core.Timeline & TimelineEffects & {
   morph(a: MorphTarget, b: MorphTarget, opts?: MorphOptions): StepTimeline
 }
 
-type TimelineMethodName = "from" | "to" | "fromTo";
+type TimelineMethodName = "from" | "to" | "fromTo" | "set";
 
 // Resolve a morph target to a single element, scoping selectors to the slide.
 const firstTarget = (t: MorphTarget, root: HTMLElement | null): Element | null => {
@@ -86,8 +86,8 @@ export function useTl() {
   const morphSpecs: MorphSpec[] = []
 
   function patchTl(tl: gsap.core.Timeline) : StepTimeline {
-    // scope from/to/fromTo selectors to the current slide
-    for (const name of ["from", "to", "fromTo"]) {
+    // scope from/to/fromTo/set selectors to the current slide
+    for (const name of ["from", "to", "fromTo", "set"]) {
       const original = (tl as any)[name];
       if (typeof original !== "function") continue;
       (tl as any)[name] = function (...args: any[]) {

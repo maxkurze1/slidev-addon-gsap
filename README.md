@@ -63,7 +63,7 @@ onMounted(() => {
 </script>
 ```
 
-All of GSAP is available (`from`/`to`/`fromTo`, stagger, easing, labels), and CSS
+All of GSAP is available (`from`/`to`/`fromTo`/`set`, stagger, easing, labels), and CSS
 selectors are scoped to the current slide. `tl.morph('.a', '.b')` adds a
 **within-slide magic-move** (A morphs into B's box) as a timeline step.
 

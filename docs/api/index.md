@@ -25,6 +25,7 @@ Returns a paused, click-driven GSAP timeline (a proxied `gsap.core.Timeline`).
 | `from(target, vars, position?)` | GSAP `from` tween. Selectors are scoped to the slide. |
 | `to(target, vars, position?)` | GSAP `to` tween (slide-scoped). |
 | `fromTo(target, fromVars, toVars, position?)` | GSAP `fromTo` (slide-scoped). |
+| `set(target, vars, position?)` | GSAP `set` (slide-scoped). |
 | `morph(a, b, opts?)` | [Within-slide magic-move](#tl-morph). |
 | *preset effects* | [`popIn`, `slideIn`, `pulse`, …](#preset-effects) |
 | *(all native timeline methods)* | `add`, `to`, `set`, `tweenTo`, `seek`, … |
