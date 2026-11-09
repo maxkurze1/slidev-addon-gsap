@@ -62,6 +62,8 @@ onMounted(() => {
 - `step()` (alias `click()`) — marks a click boundary; returns the timeline for chaining.
 - `.from` / `.to` / `.fromTo` / `.set` — plain GSAP tweens. **CSS selectors are auto-scoped
   to the current slide**, so `'.box'` only matches inside this slide.
+  `.set(...)` and `duration: 0` are safe at click boundaries (the addon turns them
+  into a 1/6000 s tween), so no `duration: 0.00001` workaround is needed.
 - Everything between two `step()` calls plays as one click.
 - Standard GSAP applies: `stagger`, `ease`, `duration`, relative time `'-=0.3'`, labels.
 - Reverses on click-back and seeks to the right place on page refresh automatically.

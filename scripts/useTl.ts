@@ -19,6 +19,21 @@ gsap.registerPlugin(Flip);
 
 const CLICKS_MAX = 999999;
 
+/**
+ * Duration (s) used in place of 0 for `set` and `duration: 0` tweens: 1% of a
+ * 60 Hz frame.
+ *
+ * Zero-duration tweens are ambiguous at click boundaries: one placed right
+ * after `step()` shares its time with the step label, so GSAP applies it one
+ * click early, and `from`/`fromTo` behave differently depending on whether the
+ * slide was entered forwards or from the back. Any real duration fixes this;
+ * GSAP rounds times to 1e-7 s and durations ≤ 1e-7 still break.
+ *
+ * The chance that a playback frame lands mid-tween (rendering an in-between
+ * value) is about INSTANT / frame time, i.e. ~1% at 60 Hz.
+ */
+const INSTANT = 1 / 60 / 100;
+
 type MorphTarget = string | Element | Element[] | null | undefined;
 
 type MorphOptions = {
@@ -60,7 +75,7 @@ type StepTimeline = gsap.core.Timeline & TimelineEffects & {
   morph(a: MorphTarget, b: MorphTarget, opts?: MorphOptions): StepTimeline
 }
 
-type TimelineMethodName = "from" | "to" | "fromTo" | "set";
+type TimelineMethodName = "from" | "to" | "fromTo";
 
 // Resolve a morph target to a single element, scoping selectors to the slide.
 const firstTarget = (t: MorphTarget, root: HTMLElement | null): Element | null => {
@@ -86,17 +101,28 @@ export function useTl() {
   const morphSpecs: MorphSpec[] = []
 
   function patchTl(tl: gsap.core.Timeline) : StepTimeline {
-    // scope from/to/fromTo/set selectors to the current slide
-    for (const name of ["from", "to", "fromTo", "set"]) {
+    // scope from/to/fromTo selectors to the current slide, and stretch
+    // zero-duration tweens to INSTANT
+    for (const name of ["from", "to", "fromTo"]) {
       const original = (tl as any)[name];
       if (typeof original !== "function") continue;
+      const varsIdx = name === "fromTo" ? 2 : 1;
       (tl as any)[name] = function (...args: any[]) {
         if (args.length > 0) {
           args[0] = toGsapTargets(scopeTargetsToSlide(args[0], slide.value));
         }
+        const vars = args[varsIdx];
+        if (vars && typeof vars === "object" && vars.duration === 0) {
+          args[varsIdx] = { ...vars, duration: INSTANT };
+        }
         return original.apply(this, args);
       };
     }
+    // `set` is a zero-duration `to` — route it through the patched `to` above.
+    // immediateRender: false matches GSAP's own timeline `set`.
+    (tl as any).set = function (targets: any, vars: gsap.TweenVars, position?: gsap.Position) {
+      return this.to(targets, { immediateRender: false, ...vars, duration: INSTANT }, position);
+    };
     tl.step = function (delay?: number) {
       this.addLabel("step-" + String(step_idx))
       // write maxMap directly to avoid the clicks.register() post-mount warning
@@ -160,10 +186,14 @@ export function useTl() {
       + (backwards ? 1 : 0) /* additional speedup for going backwards */;
     tl.value.timeScale(Math.pow(1.8, diff))
 
-    tween = tl.value.tweenTo("step-" + String(new_c), {
+    const label = "step-" + String(new_c)
+    tween = tl.value.tweenTo(label, {
       onComplete: () => {
         tween = null
         tl.value?.timeScale(1)
+        // tweenTo rounds to 1e-6 — it can stop just before/after a label
+        // seek to snap exactly onto it.
+        tl.value?.seek(label)
       }
     })
   }
